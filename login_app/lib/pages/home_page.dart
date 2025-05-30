@@ -4,6 +4,7 @@ import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_event.dart';
 import '../models/user.dart';
 import '../main.dart';
+import 'products_page.dart';
 
 class HomePage extends StatelessWidget {
   final User user;
@@ -24,7 +25,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: const Text('Product Management'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -32,30 +33,32 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.person_outline,
-              size: 100,
-              color: Colors.blue,
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.blue.shade50,
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  backgroundColor: Colors.blue,
+                  child: Icon(Icons.person, color: Colors.white),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  'Welcome, ${user.username}!',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Welcome, ${user.username}!',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _handleLogout(context),
-              child: const Text('Logout'),
-            ),
-          ],
-        ),
+          ),
+          const Expanded(
+            child: ProductsPage(),
+          ),
+        ],
       ),
     );
   }
