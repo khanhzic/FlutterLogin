@@ -3,8 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/product.dart';
 
 class ProductsService {
-  // The correct API endpoint from crudcrud.com
-  final String baseUrl = 'https://crudcrud.com/api/252769ebfce44446afb19adfebed5456';
+  final String baseUrl = 'https://crudcrud.com/api/021545b9c8f548829477e22dd8cb1409';
   final String resource = 'products';
 
   Future<List<Product>> getAllProducts() async {
@@ -21,35 +20,17 @@ class ProductsService {
     }
   }
 
-  Future<Product> getProduct(String id) async {
-    final response = await http.get(Uri.parse('$baseUrl/$resource/$id'));
-    if (response.statusCode == 200) {
-      return Product.fromJson(json.decode(response.body));
-    } else {
-      throw Exception('Failed to load product');
-    }
-  }
-
   Future<Product> createProduct(Product product) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/$resource'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'name': product.name,
-          'price': product.price,
-          'description': product.description,
-        }),
+        body: json.encode(product.toJson()),
       );
 
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
-        return Product(
-          id: responseData['_id'] ?? '',
-          name: responseData['name'],
-          price: responseData['price'].toDouble(),
-          description: responseData['description'],
-        );
+        return Product.fromJson(responseData);
       } else {
         throw Exception('Failed to create product: ${response.statusCode}');
       }
@@ -63,11 +44,7 @@ class ProductsService {
       final response = await http.put(
         Uri.parse('$baseUrl/$resource/$id'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'name': product.name,
-          'price': product.price,
-          'description': product.description,
-        }),
+        body: json.encode(product.toJson()),
       );
 
       if (response.statusCode == 200) {

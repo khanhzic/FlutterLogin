@@ -1,32 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'blocs/auth/auth_bloc.dart';
-import 'screens/login_page.dart';
-import 'screens/home_page.dart';
+import 'blocs/auth/auth_event.dart';
+import 'blocs/auth/auth_state.dart';
+import 'widgets/login_form.dart';
+import 'pages/home_page.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => AuthBloc(),
       child: MaterialApp(
-        title: 'Product Management',
+        title: 'Login Demo',
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
-        initialRoute: '/login',
-        routes: {
-          '/login': (context) => const LoginPage(),
-          '/home': (context) => const HomePage(),
-        },
+        home: const LoginPage(),
       ),
     );
   }
-} 
+}
+
+class LoginPage extends StatelessWidget {
+  const LoginPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthSuccess) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HomePage(user: state.user),
+              ),
+            );
+          } else if (state is AuthFailure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        child: const Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(16.0),
+            child: LoginForm(),
+          ),
+        ),
+      ),
+    );
+  }
+}
