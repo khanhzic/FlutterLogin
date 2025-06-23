@@ -5,6 +5,7 @@ import 'blocs/auth/auth_event.dart';
 import 'blocs/auth/auth_state.dart';
 import 'widgets/login_form.dart';
 import 'pages/home_page.dart';
+import 'splash_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
-        home: const LoginPage(),
+        home: const SplashScreen(),
       ),
     );
   }

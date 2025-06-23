@@ -40,10 +40,12 @@ dependencies:
   equatable: ^2.0.5
   qr_code_scanner_plus: ^2.0.6
   permission_handler: ^12.0.0+1
+  flutter_svg: ^2.0.9
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -93,3 +95,28 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  # Add assets here
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/svg/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo_winsun.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/images/logo_winsun.png"
+    background_color: "#ffffff"
+    theme_color: "#ffffff"
+  windows:
+    generate: true
+    image_path: "assets/images/logo_winsun.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/images/logo_winsun.png"

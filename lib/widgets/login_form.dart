@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_event.dart';
 import '../blocs/auth/auth_state.dart';
@@ -25,10 +26,10 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Widget _buildLogo() {
-    return const Icon(
-      Icons.lock_outline,
-      size: 100,
-      color: Colors.blue,
+    return Image.asset(
+      'assets/images/logo_winsun.png',
+      height: 180,
+      width: 180,
     );
   }
 
