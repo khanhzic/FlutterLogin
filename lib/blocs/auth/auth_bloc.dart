@@ -2,6 +2,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/user.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc() : super(AuthInitial()) {
@@ -16,18 +18,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
 
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8000/api/v1/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': event.email,
+          'password': event.password,
+        }),
+      );
+      print('Login API response: \\nStatus: \\${response.statusCode}\\nBody: \\${response.body}');
 
-      // Check credentials (hardcoded for demo)
-      if (event.username == 'admin' && event.password == '123456') {
-        final user = User(
-          username: event.username,
+      if (response.statusCode == 200) {
+        emit(AuthSuccess(User(
+          username: event.email,
           password: event.password,
-        );
-        emit(AuthSuccess(user));
+        )));
       } else {
-        emit(const AuthFailure('Invalid username or password'));
+        emit(const AuthFailure('Sai tài khoản hoặc mật khẩu'));
       }
     } catch (error) {
       emit(AuthFailure(error.toString()));

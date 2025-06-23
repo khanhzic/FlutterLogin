@@ -13,13 +13,13 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -44,16 +44,19 @@ class _LoginFormState extends State<LoginForm> {
 
   Widget _buildUsernameField() {
     return TextFormField(
-      controller: _usernameController,
+      controller: _emailController,
       decoration: const InputDecoration(
-        labelText: 'Username',
-        hintText: 'Enter your username',
+        labelText: 'Email',
+        hintText: 'Enter your email',
         prefixIcon: Icon(Icons.person_outline),
         border: OutlineInputBorder(),
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Please enter your username';
+          return 'Please enter your email';
+        }
+        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)) {
+          return 'Please enter a valid email';
         }
         return null;
       },
@@ -99,7 +102,7 @@ class _LoginFormState extends State<LoginForm> {
                   if (_formKey.currentState!.validate()) {
                     context.read<AuthBloc>().add(
                           LoginButtonPressed(
-                            username: _usernameController.text,
+                            email: _emailController.text,
                             password: _passwordController.text,
                           ),
                         );

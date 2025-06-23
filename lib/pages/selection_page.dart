@@ -8,7 +8,7 @@ class SelectionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chọn Công Đoạn Thực Hiện'),
+        title: const Text('Chọn Sản Phẩm Thực Hiện'),
       ),
       body: Center(
         child: Column(
