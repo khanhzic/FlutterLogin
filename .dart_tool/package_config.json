@@ -201,9 +201,9 @@
     },
     {
       "name": "image_picker_for_web",
-      "rootUri": "file:///C:/Users/MSI%20GF72/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_for_web-2.2.0",
+      "rootUri": "file:///C:/Users/MSI%20GF72/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_for_web-3.0.6",
       "packageUri": "lib/",
-      "languageVersion": "2.18"
+      "languageVersion": "3.4"
     },
     {
       "name": "image_picker_ios",
@@ -285,7 +285,7 @@
     },
     {
       "name": "mime",
-      "rootUri": "file:///C:/Users/MSI%20GF72/AppData/Local/Pub/Cache/hosted/pub.dev/mime-1.0.6",
+      "rootUri": "file:///C:/Users/MSI%20GF72/AppData/Local/Pub/Cache/hosted/pub.dev/mime-2.0.0",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },

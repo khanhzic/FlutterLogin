@@ -80,8 +80,16 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
-      body: const Center(
-        child: Text('Welcome Home!'),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Welcome, \\${user.name}!', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Text('Email: \\${user.email}'),
+            if (user.role != null) Text('Role: \\${user.role}'),
+          ],
+        ),
       ),
     );
   }

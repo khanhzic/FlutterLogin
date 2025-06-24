@@ -102,21 +102,8 @@ flutter:
     - assets/icons/
     - assets/svg/
 
-flutter_launcher_icons:
+flutter_icons:
   android: true
-  ios: true
-  image_path: "assets/images/logo_winsun.png"
+  ios: false
+  image_path: "assets/images/logo.png"
   min_sdk_android: 21
-  remove_alpha_ios: true
-  web:
-    generate: true
-    image_path: "assets/images/logo_winsun.png"
-    background_color: "#ffffff"
-    theme_color: "#ffffff"
-  windows:
-    generate: true
-    image_path: "assets/images/logo_winsun.png"
-    icon_size: 48
-  macos:
-    generate: true
-    image_path: "assets/images/logo_winsun.png"

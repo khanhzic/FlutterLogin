@@ -17,6 +17,7 @@ class ProcessDetailPage extends StatefulWidget {
 class _ProcessDetailPageState extends State<ProcessDetailPage> {
   final TextEditingController _qrCodeController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _quantityController = TextEditingController();
   bool _isStartButtonEnabled = false;
   XFile? _pickedImage; // Variable to store the picked image
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
@@ -34,6 +35,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     _qrCodeController.removeListener(_updateStartButtonState);
     _qrCodeController.dispose();
     _notesController.dispose();
+    _quantityController.dispose();
     controller?.dispose();
     super.dispose();
   }
@@ -179,12 +181,22 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
             const SizedBox(height: 20),
             TextField(
               controller: _qrCodeController,
+              readOnly: true,
               decoration: const InputDecoration(
-                labelText: 'Nội dung QR Code hoặc tự nhập',
+                labelText: 'Nội dung QR Code',
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.input),
+                prefixIcon: Icon(Icons.qr_code),
               ),
-              onChanged: (text) => _updateStartButtonState(),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _quantityController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Nhập số lượng sản phẩm sẽ làm',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.numbers),
+              ),
             ),
             const SizedBox(height: 20),
             TextField(
@@ -196,48 +208,6 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
               ),
               maxLines: 3,
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _takePicture,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Chụp hình'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      textStyle: const TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _pickImageFromGallery,
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('Chọn ảnh'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      textStyle: const TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (_pickedImage != null) ...[
-              const SizedBox(height: 20),
-              Image.file(
-                File(_pickedImage!.path),
-                height: 200,
-                fit: BoxFit.cover,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Đã chọn ảnh: ${_pickedImage!.name}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
-              ),
-            ],
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _isStartButtonEnabled ? _startProcess : null,

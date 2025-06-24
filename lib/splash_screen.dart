@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'widgets/login_form.dart';
+import 'main.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -29,22 +29,6 @@ class _SplashScreenState extends State<SplashScreen> {
           'assets/images/logo_winsun.png',
           width: MediaQuery.of(context).size.width * 0.8,
           fit: BoxFit.contain,
-        ),
-      ),
-    );
-  }
-}
-
-class LoginPage extends StatelessWidget {
-  const LoginPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: LoginForm(),
         ),
       ),
     );

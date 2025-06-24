@@ -29,10 +29,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       print('Login API response: \\nStatus: \\${response.statusCode}\\nBody: \\${response.body}');
 
       if (response.statusCode == 200) {
-        emit(AuthSuccess(User(
-          username: event.email,
-          password: event.password,
-        )));
+        final data = jsonDecode(response.body);
+        final userJson = data['user'];
+        final user = User.fromJson(userJson);
+        // Nếu cần lưu access_token, có thể lưu vào đâu đó ở đây
+        emit(AuthSuccess(user));
       } else {
         emit(const AuthFailure('Sai tài khoản hoặc mật khẩu'));
       }
