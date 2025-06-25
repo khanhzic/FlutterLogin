@@ -4,6 +4,7 @@ import 'auth_event.dart';
 import 'auth_state.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc() : super(AuthInitial()) {
@@ -25,14 +26,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'email': event.email,
           'password': event.password,
         }),
-      );
-      print('Login API response: \\nStatus: \\${response.statusCode}\\nBody: \\${response.body}');
+      ).timeout(const Duration(seconds: 60), onTimeout: () {
+        throw Exception('Kết nối quá lâu, vui lòng thử lại.');
+      });
+      print('Login API response: \nStatus: \${response.statusCode}\nBody: \${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final userJson = data['user'];
         final user = User.fromJson(userJson);
-        // Nếu cần lưu access_token, có thể lưu vào đâu đó ở đây
+        final accessToken = data['access_token'];
+        // Lưu token và user vào SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', accessToken);
+        await prefs.setString('user', jsonEncode(userJson));
         emit(AuthSuccess(user));
       } else {
         emit(const AuthFailure('Sai tài khoản hoặc mật khẩu'));
@@ -45,7 +52,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   void _onLogoutButtonPressed(
     LogoutButtonPressed event,
     Emitter<AuthState> emit,
-  ) {
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access_token');
+    await prefs.remove('user');
     emit(AuthInitial());
   }
 } 

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'models/user.dart';
+import 'pages/home_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -13,11 +17,25 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 2), () {
+    _checkLoginStatus();
+  }
+
+  void _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final userString = prefs.getString('user');
+    await Future.delayed(const Duration(seconds: 2));
+    if (token != null && token.isNotEmpty && userString != null) {
+      final userJson = jsonDecode(userString);
+      final user = User.fromJson(userJson);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => HomePage(user: user)),
+      );
+    } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const LoginPage()),
       );
-    });
+    }
   }
 
   @override
