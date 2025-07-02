@@ -11,6 +11,7 @@
         "equatable",
         "flutter",
         "flutter_bloc",
+        "flutter_slidable",
         "flutter_svg",
         "http",
         "image_picker",
@@ -811,6 +812,13 @@
       "dependencies": [
         "meta",
         "path"
+      ]
+    },
+    {
+      "name": "flutter_slidable",
+      "version": "3.1.2",
+      "dependencies": [
+        "flutter"
       ]
     }
   ],

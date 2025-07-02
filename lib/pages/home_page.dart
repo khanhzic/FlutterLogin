@@ -5,6 +5,7 @@ import '../blocs/auth/auth_event.dart';
 import '../models/user.dart';
 import '../main.dart';
 import 'selection_page.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 class HomePage extends StatelessWidget {
   final User user;
@@ -41,10 +42,10 @@ class HomePage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
+            icon: const Icon(Icons.person),
+            tooltip: 'User menu',
             onPressed: () {
-              _handleLogout(context);
+              _scaffoldKey.currentState?.openEndDrawer();
             },
           ),
         ],
@@ -81,6 +82,35 @@ class HomePage extends StatelessWidget {
                   context,
                   MaterialPageRoute(builder: (context) => const SelectionPage()),
                 );
+              },
+            ),
+          ],
+        ),
+      ),
+      endDrawer: Drawer(
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: Text(user.name),
+              accountEmail: const Text(''),
+              currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.lock),
+              title: const Text('Đổi mật khẩu'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Chức năng đổi mật khẩu đang phát triển!')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Đăng xuất'),
+              onTap: () {
+                Navigator.pop(context);
+                _handleLogout(context);
               },
             ),
           ],
