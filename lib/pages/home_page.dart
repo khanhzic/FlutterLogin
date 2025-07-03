@@ -1,107 +1,110 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../blocs/auth/auth_bloc.dart';
-import '../blocs/auth/auth_event.dart';
+import 'process_detail_page.dart'; // Import the new ProcessDetailPage
+import '../models/app_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/user.dart';
-import '../main.dart';
-import 'selection_page.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
+import 'change_password_page.dart'; // Import the new ChangePasswordPage
+import 'process_product_page.dart'; // Import the new ProcessProductPage
+import 'my_profile.dart';
 
-class HomePage extends StatelessWidget {
-  final User user;
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
-  HomePage({super.key, required this.user});
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
 
-  void _handleLogout(BuildContext context) {
-    context.read<AuthBloc>().add(LogoutButtonPressed());
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const LoginPage(),
-      ),
-    );
+class _HomePageState extends State<HomePage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  User? user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('user');
+    if (userString != null) {
+      final userJson = jsonDecode(userString);
+      setState(() {
+        user = User.fromJson(userJson);
+      });
+    }
+  }
+
+  void _handleLogout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access_token');
+    await prefs.remove('user');
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: const Text('Home'),
+        title: const Text('Công việc hôm nay'),
         leading: IconButton(
           icon: const Icon(Icons.menu),
           tooltip: 'Open menu',
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SelectionPage()),
-            );
+            _scaffoldKey.currentState?.openDrawer();
           },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            tooltip: 'User menu',
-            onPressed: () {
-              _scaffoldKey.currentState?.openEndDrawer();
-            },
-          ),
-        ],
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text(
-                'Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
-              ),
+            UserAccountsDrawerHeader(
+              accountName: Text(user?.name ?? ''),
+              accountEmail: Text(user?.email ?? ''),
+              currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
             ),
             ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () {
-                _handleLogout(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.qr_code_scanner),
-              title: const Text('Scan QR Code'),
+              leading: const Icon(Icons.account_circle),
+              title: const Text('Tài khoản'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SelectionPage()),
-                );
+                if (user != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MyProfilePage(user: user!)),
+                  );
+                }
               },
             ),
-          ],
-        ),
-      ),
-      endDrawer: Drawer(
-        child: Column(
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(user.name),
-              accountEmail: const Text(''),
-              currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
+            ListTile(
+              leading: const Icon(Icons.account_circle),
+              title: const Text('Công việc'),
+              onTap: () {
+                Navigator.pop(context);
+                if (user != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => HomePage()),
+                  );
+                }
+              },
             ),
             ListTile(
               leading: const Icon(Icons.lock),
               title: const Text('Đổi mật khẩu'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Chức năng đổi mật khẩu đang phát triển!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
                 );
               },
             ),
@@ -116,103 +119,105 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Tài khoản: ' + user.name,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Thống kê tháng 06/2025',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _buildStatCard(
-              color: Colors.green,
-              icon: Icons.check,
-              title: 'Đơn hàng hoàn thành',
-              count: 0,
-              staff: 0,
-            ),
-            const SizedBox(height: 12),
-            _buildStatCard(
-              color: Colors.yellow[700]!,
-              icon: Icons.access_time,
-              title: 'Đơn hàng đang làm',
-              count: 0,
-              staff: 0,
-            ),
-            const SizedBox(height: 12),
-            _buildStatCard(
-              color: Colors.red,
-              icon: Icons.error,
-              title: 'Đơn hàng bị lỗi',
-              count: 0,
-              staff: 0,
-            ),
-            const SizedBox(height: 12),
-            _buildStatCard(
-              color: Colors.cyan,
-              icon: Icons.local_shipping,
-              title: 'Đơn hàng đã vận chuyển',
-              count: 0,
-              staff: 0,
-            ),
-            const SizedBox(height: 12),
-            _buildStatCard(
-              color: Colors.grey,
-              icon: Icons.refresh,
-              title: 'Đơn hàng cần vận chuyển lại',
-              count: 0,
-              staff: 0,
-            ),
-          ],
+      backgroundColor: const Color(0xFFF7F8FA),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 18.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Image.asset(
+                  'assets/images/logo_winsun.png',
+                  height: 60,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Các việc đang làm',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
+              ),
+              const SizedBox(height: 10),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 1.2,
+                children: [
+                  _buildGridCard(context, 'Đốt dây', AppIcons.burnWire, Colors.red),
+                  _buildGridCard(context, 'Ráp', AppIcons.wrench, Colors.grey[800]!),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Các sản phẩm',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
+              ),
+              const SizedBox(height: 10),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 1.2,
+                children: [
+                  _buildGridCard(context, 'Cầu vồng', AppIcons.rainbow, Colors.red, isProduct: true),
+                  _buildGridCard(context, 'Cuốn', AppIcons.scroll, Colors.green, isProduct: true),
+                  _buildGridCard(context, 'Tổ ong + Cửa lưới', AppIcons.honeycomb, Colors.amber, isProduct: true),
+                  _buildGridCard(context, 'Bạt', AppIcons.net, Colors.blue, isProduct: true),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatCard({
-    required Color color,
-    required IconData icon,
-    required String title,
-    required int count,
-    required int staff,
-  }) {
+  Widget _buildGridCard(BuildContext context, String text, IconData icon, Color iconColor, {bool isProduct = false}) {
     return Card(
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      color: Colors.white,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          if (isProduct) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProcessProductPage(screenAction: text),
               ),
-              width: 48,
-              height: 48,
-              child: Icon(icon, color: Colors.white, size: 32),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('$count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text('Từ $staff nhân viên', style: const TextStyle(fontSize: 13)),
-                ],
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProcessDetailPage(processName: text),
               ),
-            ),
-          ],
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 56, color: iconColor),
+              const SizedBox(height: 12),
+              Text(
+                text,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

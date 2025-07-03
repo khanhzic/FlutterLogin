@@ -153,6 +153,13 @@
       ]
     },
     {
+      "name": "flutter_slidable",
+      "version": "3.1.2",
+      "dependencies": [
+        "flutter"
+      ]
+    },
+    {
       "name": "shared_preferences",
       "version": "2.5.3",
       "dependencies": [
@@ -812,13 +819,6 @@
       "dependencies": [
         "meta",
         "path"
-      ]
-    },
-    {
-      "name": "flutter_slidable",
-      "version": "3.1.2",
-      "dependencies": [
-        "flutter"
       ]
     }
   ],

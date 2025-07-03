@@ -29,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
       final userJson = jsonDecode(userString);
       final user = User.fromJson(userJson);
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => HomePage(user: user)),
+        MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } else {
       Navigator.of(context).pushReplacement(

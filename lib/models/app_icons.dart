@@ -11,9 +11,8 @@ class AppIcons {
   static const IconData package = Icons.inventory;      // Đóng gói
 
   // Sản phẩm
-  static const IconData rainbow = Icons.gradient;       // Cầu vồng
-  static const IconData scroll = Icons.menu_book;       // Cuốn
-  static const IconData honeycomb = Icons.bubble_chart; // Tổ ong
-  static const IconData net = Icons.window;             // Cửa lưới
-  static const IconData tarp = Icons.terrain;           // Bạt
+  static const IconData rainbow = Icons.filter_hdr;       // Cầu vồng
+  static const IconData scroll = Icons.receipt_long;       // Cuốn
+  static const IconData honeycomb = Icons.hive; // Tổ ong + Cửa lưới
+  static const IconData net = Icons.terrain;             // Bạt
 } 

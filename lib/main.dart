@@ -4,8 +4,8 @@ import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_event.dart';
 import 'blocs/auth/auth_state.dart';
 import 'widgets/login_form.dart';
-import 'pages/home_page.dart';
 import 'splash_screen.dart';
+import 'pages/home_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
     return BlocProvider(
       create: (context) => AuthBloc(),
       child: MaterialApp(
-        title: 'Login Demo',
+        title: 'Winsun',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
@@ -42,7 +42,7 @@ class LoginPage extends StatelessWidget {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => HomePage(user: state.user),
+                builder: (context) => const HomePage(),
               ),
             );
           } else if (state is AuthFailure) {

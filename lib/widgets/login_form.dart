@@ -26,19 +26,24 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Widget _buildLogo() {
-    return Image.asset(
-      'assets/images/logo_winsun.png',
-      height: 180,
-      width: 180,
+    return FractionallySizedBox(
+      widthFactor: 0.95,
+      child: Image.asset(
+        'assets/images/logo_winsun.png',
+        fit: BoxFit.contain,
+      ),
     );
   }
 
   Widget _buildTitle() {
     return const Text(
-      'Welcome Back',
+      'Winsun nâng tầm cuộc sống!',
       style: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
+        fontSize: 25,
+        fontWeight: FontWeight.normal,
+        color: Colors.blueAccent,
+        fontStyle: FontStyle.italic,
+        fontFamily: 'Roboto',
       ),
     );
   }
@@ -48,16 +53,16 @@ class _LoginFormState extends State<LoginForm> {
       controller: _emailController,
       decoration: const InputDecoration(
         labelText: 'Email',
-        hintText: 'Enter your email',
+        hintText: 'Nhập email',
         prefixIcon: Icon(Icons.person_outline),
         border: OutlineInputBorder(),
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Please enter your email';
+          return 'Hãy nhập email hoặc tên đăng nhập';
         }
         if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)) {
-          return 'Please enter a valid email';
+          return 'Email không hợp lệ';
         }
         return null;
       },
@@ -69,8 +74,8 @@ class _LoginFormState extends State<LoginForm> {
       controller: _passwordController,
       obscureText: !_isPasswordVisible,
       decoration: InputDecoration(
-        labelText: 'Password',
-        hintText: 'Enter your password',
+        labelText: 'Mật khẩu',
+        hintText: 'Nhập mật khẩu',
         prefixIcon: const Icon(Icons.lock_outline),
         border: const OutlineInputBorder(),
         suffixIcon: IconButton(
@@ -86,7 +91,7 @@ class _LoginFormState extends State<LoginForm> {
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Please enter your password';
+          return 'Hãy nhập mật khẩu';
         }
         return null;
       },
@@ -115,7 +120,7 @@ class _LoginFormState extends State<LoginForm> {
           child: state is AuthLoading
               ? const CircularProgressIndicator()
               : const Text(
-                  'Login',
+                  'Đăng nhập',
                   style: TextStyle(fontSize: 16),
                 ),
         );
@@ -138,30 +143,30 @@ class _LoginFormState extends State<LoginForm> {
           const SizedBox(height: 16),
           _buildPasswordField(),
           const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                // TODO: Implement forgot password
-              },
-              child: const Text('Forgot Password?'),
-            ),
-          ),
+          // Align(
+          //   alignment: Alignment.centerRight,
+          //   child: TextButton(
+          //     onPressed: () {
+          //       // TODO: Implement forgot password
+          //     },
+          //     child: const Text('Forgot Password?'),
+          //   ),
+          // ),
           const SizedBox(height: 16),
           _buildLoginButton(),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text("Don't have an account?"),
-              TextButton(
-                onPressed: () {
-                  // TODO: Navigate to register page
-                },
-                child: const Text('Register'),
-              ),
-            ],
-          ),
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.center,
+          //   children: [
+          //     const Text("Don't have an account?"),
+          //     TextButton(
+          //       onPressed: () {
+          //         // TODO: Navigate to register page
+          //       },
+          //       child: const Text('Register'),
+          //     ),
+          //   ],
+          // ),
         ],
       ),
     );
