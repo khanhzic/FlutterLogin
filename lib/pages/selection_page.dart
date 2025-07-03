@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'process_detail_page.dart'; // Import the new ProcessDetailPage
 import '../models/app_icons.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class SelectionPage extends StatelessWidget {
   const SelectionPage({super.key});
@@ -43,8 +44,8 @@ class SelectionPage extends StatelessWidget {
                 crossAxisSpacing: 14,
                 childAspectRatio: 1.2,
                 children: [
-                  _buildGridCard(context, 'Đốt dây', AppIcons.burnWire, Colors.grey[800]!),
-                  _buildGridCard(context, 'Ráp', AppIcons.wrench, Colors.grey[800]!),
+                  _buildGridCard(context, 'Đốt dây', 'assets/svg/dot_day.svg', Colors.grey[800]!),
+                  _buildGridCard(context, 'Ráp', 'assets/svg/rap.svg', Colors.grey[800]!),
                 ],
               ),
               const SizedBox(height: 18),
@@ -61,10 +62,10 @@ class SelectionPage extends StatelessWidget {
                 crossAxisSpacing: 14,
                 childAspectRatio: 1.2,
                 children: [
-                  _buildGridCard(context, 'Cầu vồng', AppIcons.rainbow, Colors.grey[800]!),
-                  _buildGridCard(context, 'Cửa lưới', AppIcons.net, Colors.grey[800]!),
-                  _buildGridCard(context, 'Tổ ong', AppIcons.honeycomb, Colors.grey[800]!),
-                  _buildGridCard(context, 'Bạt', AppIcons.tarp, Colors.grey[800]!),
+                  _buildGridCard(context, 'Cầu vồng', 'assets/svg/cau_vong.svg', null),
+                  _buildGridCard(context, 'Cửa lưới', 'assets/svg/ghim.svg', Colors.grey[800]!),
+                  _buildGridCard(context, 'Tổ ong', 'assets/svg/to_ong.svg', Colors.grey[800]!),
+                  _buildGridCard(context, 'Bạt', 'assets/svg/bat.svg', Colors.grey[800]!),
                 ],
               ),
             ],
@@ -74,7 +75,7 @@ class SelectionPage extends StatelessWidget {
     );
   }
 
-  Widget _buildGridCard(BuildContext context, String text, IconData icon, Color iconColor) {
+  Widget _buildGridCard(BuildContext context, String text, String svgAsset, Color? iconColor) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -96,7 +97,9 @@ class SelectionPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 56, color: iconColor),
+              iconColor == null
+                  ? SvgPicture.asset(svgAsset, height: 56)
+                  : SvgPicture.asset(svgAsset, height: 56, color: iconColor),
               const SizedBox(height: 12),
               Text(
                 text,
