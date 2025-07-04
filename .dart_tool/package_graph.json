@@ -15,6 +15,7 @@
         "flutter_svg",
         "http",
         "image_picker",
+        "intl",
         "permission_handler",
         "qr_code_scanner_plus",
         "shared_preferences"
@@ -71,6 +72,15 @@
         "test_api",
         "vector_math",
         "vm_service"
+      ]
+    },
+    {
+      "name": "intl",
+      "version": "0.20.2",
+      "dependencies": [
+        "clock",
+        "meta",
+        "path"
       ]
     },
     {
