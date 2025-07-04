@@ -45,7 +45,7 @@ class ProcessProductPage extends StatelessWidget {
                 crossAxisCount: 3,
                 mainAxisSpacing: 14,
                 crossAxisSpacing: 14,
-                childAspectRatio: 0.95,
+                childAspectRatio: 0.85,
                 children: processItems.map((item) {
                   return Card(
                     elevation: 2,
@@ -64,15 +64,15 @@ class ProcessProductPage extends StatelessWidget {
                         );
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(item.icon, size: 56, color: Colors.grey[800]),
-                            const SizedBox(height: 12),
+                            Icon(item.icon, size: 48, color: Colors.grey[800]),
+                            const SizedBox(height: 10),
                             Text(
                               item.label,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87),
                               textAlign: TextAlign.center,
                             ),
                           ],

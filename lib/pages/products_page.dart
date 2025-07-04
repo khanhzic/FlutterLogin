@@ -3,7 +3,7 @@ import '../models/product.dart';
 import '../services/products_service.dart';
 
 class ProductsPage extends StatefulWidget {
-  ProductsPage({super.key});
+  const ProductsPage({super.key});
 
   @override
   State<ProductsPage> createState() => ProductsPageState();
@@ -36,12 +36,12 @@ class ProductsPageState extends State<ProductsPage> {
 
   Future<void> showAddEditDialog([Product? product]) async {
     final bool isEditing = product != null;
-    final _formKey = GlobalKey<FormState>();
-    final _nameController = TextEditingController(text: product?.name);
-    final _priceController = TextEditingController(
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: product?.name);
+    final priceController = TextEditingController(
       text: product?.price.toString(),
     );
-    final _descriptionController = TextEditingController(
+    final descriptionController = TextEditingController(
       text: product?.description,
     );
 
@@ -50,12 +50,12 @@ class ProductsPageState extends State<ProductsPage> {
       builder: (context) => AlertDialog(
         title: Text(isEditing ? 'Edit Product' : 'Add Product'),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                controller: _nameController,
+                controller: nameController,
                 decoration: const InputDecoration(labelText: 'Name'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -66,7 +66,7 @@ class ProductsPageState extends State<ProductsPage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _priceController,
+                controller: priceController,
                 decoration: const InputDecoration(labelText: 'Price'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -81,7 +81,7 @@ class ProductsPageState extends State<ProductsPage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _descriptionController,
+                controller: descriptionController,
                 decoration: const InputDecoration(labelText: 'Description'),
                 maxLines: 3,
                 validator: (value) {
@@ -101,17 +101,17 @@ class ProductsPageState extends State<ProductsPage> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 try {
                   final newProduct = Product(
                     id: product?.id ?? '',
-                    name: _nameController.text,
-                    price: double.parse(_priceController.text),
-                    description: _descriptionController.text,
+                    name: nameController.text,
+                    price: double.parse(priceController.text),
+                    description: descriptionController.text,
                   );
 
                   if (isEditing) {
-                    await _productsService.updateProduct(product!.id, newProduct);
+                    await _productsService.updateProduct(product.id, newProduct);
                   } else {
                     await _productsService.createProduct(newProduct);
                   }

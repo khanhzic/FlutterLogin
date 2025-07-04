@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // Import image_picker
-import 'dart:io'; // Required for File
+// Required for File
 import 'package:login_app/pages/process_status_page.dart'; // Import the new page
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -199,15 +199,15 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
               ),
             ),
             const SizedBox(height: 20),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Ghi chú',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.note_alt),
-              ),
-              maxLines: 3,
-            ),
+            // TextField(
+            //   controller: _notesController,
+            //   decoration: const InputDecoration(
+            //     labelText: 'Ghi chú',
+            //     border: OutlineInputBorder(),
+            //     prefixIcon: Icon(Icons.note_alt),
+            //   ),
+            //   maxLines: 3,
+            // ),
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _isStartButtonEnabled ? _startProcess : null,

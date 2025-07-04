@@ -25,17 +25,17 @@ class MyProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
     return Scaffold(
-      key: _scaffoldKey,
+      key: scaffoldKey,
       appBar: AppBar(
         title: const Text('Tài khoản của tôi'),
         leading: IconButton(
           icon: const Icon(Icons.menu),
           tooltip: 'Open menu',
           onPressed: () {
-            _scaffoldKey.currentState?.openDrawer();
+            scaffoldKey.currentState?.openDrawer();
           },
         ),
         // actions: [
@@ -53,8 +53,8 @@ class MyProfilePage extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: <Widget>[
             UserAccountsDrawerHeader(
-              accountName: Text(user?.name ?? ''),
-              accountEmail: Text(user?.email ?? ''),
+              accountName: Text(user.name ?? ''),
+              accountEmail: Text(user.email ?? ''),
               currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
             ),
             ListTile(
@@ -62,26 +62,22 @@ class MyProfilePage extends StatelessWidget {
               title: const Text('Tài khoản'),
               onTap: () {
                 Navigator.pop(context);
-                if (user != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => MyProfilePage(user: user!)),
-                  );
-                }
-              },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MyProfilePage(user: user!)),
+                );
+                            },
             ),
             ListTile(
               leading: const Icon(Icons.account_circle),
               title: const Text('Công việc'),
               onTap: () {
                 Navigator.pop(context);
-                if (user != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => HomePage()),
-                  );
-                }
-              },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomePage()),
+                );
+                            },
             ),
             ListTile(
               leading: const Icon(Icons.lock),
@@ -111,7 +107,7 @@ class MyProfilePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Tài khoản: ' + user.name,
+              'Tài khoản: ${user.name}',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87),
             ),
             const SizedBox(height: 12),

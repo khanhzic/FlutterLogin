@@ -23,7 +23,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     setState(() { _isLoading = true; });
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
-    final url = Uri.parse('${baseUrl}/users/change-password');
+    final url = Uri.parse('$baseUrl/users/change-password');
     try {
       final response = await http.post(
         url,
