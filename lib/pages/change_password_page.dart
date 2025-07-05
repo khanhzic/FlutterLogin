@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import '../config/app_config.dart';
+import '../services/api_common.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -22,23 +20,15 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; });
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token');
-    final url = Uri.parse('${baseUrl}/users/change-password');
+    final token = prefs.getString('access_token') ?? '';
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'old_password': _oldPasswordController.text,
-          'new_password': _newPasswordController.text,
-          'new_password_confirmation': _confirmPasswordController.text,
-        }),
+      final data = await ApiCommon.changePassword(
+        token,
+        _oldPasswordController.text,
+        _newPasswordController.text,
+        _confirmPasswordController.text,
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && (data['success'] == true || data['status'] == true)) {
+      if (data['success'] == true || data['status'] == true) {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(

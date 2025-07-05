@@ -1,96 +1,132 @@
 import 'package:flutter/material.dart';
+import '../models/user.dart';
+import 'selection_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_event.dart';
-import '../models/user.dart';
-import '../main.dart';
-import 'home_page.dart';
-import 'change_password_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import '../services/api_common.dart';
+import 'dart:core';
 
-
-class MyProfilePage extends StatelessWidget {
+class MyProfilePage extends StatefulWidget {
   final User user;
 
   const MyProfilePage({super.key, required this.user});
 
-  void _handleLogout(BuildContext context) {
-    context.read<AuthBloc>().add(LogoutButtonPressed());
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const LoginPage(),
-      ),
-    );
+  @override
+  State<MyProfilePage> createState() => _MyProfilePageState();
+}
+
+class _MyProfilePageState extends State<MyProfilePage> {
+  int completed = 0;
+  int pending = 0;
+  int error = 0;
+  int transported = 0;
+  int retransport = 0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchStats();
+  }
+
+  Future<void> fetchStats() async {
+    setState(() { _loading = true; });
+    try {
+      final report = await ApiCommon.getUserReport();
+      final data = (report != null && report is Map && report['data'] != null && report['data'] is Map)
+          ? report['data'] as Map
+          : <String, dynamic>{};
+      final stats = (data.isNotEmpty && data['statistics'] != null && data['statistics'] is Map)
+          ? data['statistics'] as Map
+          : <String, dynamic>{};
+      setState(() {
+        completed = stats['completed'] ?? 0;
+        pending = stats['pending'] ?? 0;
+        error = stats['error'] ?? 0;
+        transported = stats['transported'] ?? 0;
+        retransport = stats['retransport'] ?? 0;
+      });
+    } catch (e) {
+      // handle error if needed
+    } finally {
+      setState(() { _loading = false; });
+    }
+  }
+
+  void _handleLogout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access_token');
+    await prefs.remove('user');
+    if (mounted) {
+      context.read<AuthBloc>().add(LogoutButtonPressed());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
+    final now = DateTime.now();
+    final monthYear = DateFormat('MM/yyyy').format(now);
     return Scaffold(
-      key: _scaffoldKey,
-      appBar: AppBar(
-        title: const Text('Tài khoản của tôi'),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          tooltip: 'Open menu',
-          onPressed: () {
-            _scaffoldKey.currentState?.openDrawer();
-          },
-        ),
-        // actions: [
-        //   IconButton(
-        //     icon: const Icon(Icons.person),
-        //     tooltip: 'User menu',
-        //     onPressed: () {
-        //       _scaffoldKey.currentState?.openEndDrawer();
-        //     },
-        //   ),
-        // ],
-      ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
-            UserAccountsDrawerHeader(
-              accountName: Text(user?.name ?? ''),
-              accountEmail: Text(user?.email ?? ''),
-              currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+              child: Text(
+                'Menu',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
             ),
             ListTile(
-              leading: const Icon(Icons.account_circle),
-              title: const Text('Tài khoản'),
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
               onTap: () {
-                Navigator.pop(context);
-                if (user != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => MyProfilePage(user: user!)),
-                  );
-                }
+                _handleLogout(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.account_circle),
+              leading: const Icon(Icons.qr_code_scanner),
+              title: const Text('Scan QR Code'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SelectionPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.work),
               title: const Text('Công việc'),
               onTap: () {
                 Navigator.pop(context);
-                if (user != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => HomePage()),
-                  );
-                }
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SelectionPage()),
+                );
               },
+            ),
+            UserAccountsDrawerHeader(
+              accountName: Text(widget.user.name),
+              accountEmail: const Text(''),
+              currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
             ),
             ListTile(
               leading: const Icon(Icons.lock),
               title: const Text('Đổi mật khẩu'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Chức năng đổi mật khẩu đang phát triển!')),
                 );
               },
             ),
@@ -105,61 +141,53 @@ class MyProfilePage extends StatelessWidget {
           ],
         ),
       ),
+      appBar: AppBar(
+        title: const Text('Home'),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          tooltip: 'Open menu',
+          onPressed: () {
+            Scaffold.of(context).openDrawer();
+          },
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Tài khoản: ' + user.name,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Thống kê tháng 06/2025',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _buildStatCard(
-              color: Colors.green,
-              icon: Icons.check,
-              title: 'Đơn hàng hoàn thành',
-              count: 0,
-              staff: 0,
-            ),
-            const SizedBox(height: 12),
-            _buildStatCard(
-              color: Colors.yellow,
-              icon: Icons.access_time,
-              title: 'Đơn hàng đang làm',
-              count: 0,
-              staff: 0,
-            ),
-            const SizedBox(height: 12),
-            _buildStatCard(
-              color: Colors.red,
-              icon: Icons.error,
-              title: 'Đơn hàng bị lỗi',
-              count: 0,
-              staff: 0,
-            ),
-            const SizedBox(height: 12),
-            _buildStatCard(
-              color: Colors.cyan,
-              icon: Icons.local_shipping,
-              title: 'Đơn hàng đã vận chuyển',
-              count: 0,
-              staff: 0,
-            ),
-            const SizedBox(height: 12),
-            _buildStatCard(
-              color: Colors.grey,
-              icon: Icons.refresh,
-              title: 'Đơn hàng cần vận chuyển lại',
-              count: 0,
-              staff: 0,
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tài khoản: ' + widget.user.name,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Thống kê tháng $monthYear',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (_loading)
+                const Center(child: CircularProgressIndicator()),
+              if (!_loading) ...[
+                GridView.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1, // square
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildStatCard(color: Colors.green, icon: Icons.check, title: 'Hoàn thành', count: completed),
+                    _buildStatCard(color: Colors.yellow, icon: Icons.access_time, title: 'Đang làm', count: pending),
+                    _buildStatCard(color: Colors.red, icon: Icons.error, title: 'Lỗi', count: error),
+                    _buildStatCard(color: Colors.cyan, icon: Icons.local_shipping, title: 'Đã vận chuyển', count: transported),
+                    _buildStatCard(color: Colors.grey, icon: Icons.refresh, title: 'Vận chuyển lại', count: retransport),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -170,38 +198,33 @@ class MyProfilePage extends StatelessWidget {
     required IconData icon,
     required String title,
     required int count,
-    required int staff,
   }) {
     return Card(
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                width: 36,
+                height: 36,
+                child: Icon(icon, color: Colors.white, size: 28),
               ),
-              width: 48,
-              height: 48,
-              child: Icon(icon, color: Colors.white, size: 32),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text('Từ staff nhân viên', style: const TextStyle(fontSize: 13)),
-                ],
-              ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              Text('$count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
       ),
     );
