@@ -17,59 +17,66 @@ class SelectionPage extends StatelessWidget {
         automaticallyImplyLeading: true,
       ),
       backgroundColor: const Color(0xFFF7F8FA),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 18.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Image.asset(
-                  'assets/images/logo_winsun.png',
-                  height: 60,
-                  fit: BoxFit.contain,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+          children: [
+            Center(
+              child: Image.asset(
+                'assets/images/logo_winsun.png',
+                height: 60,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Các việc đang làm',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2.2,
+                  child: _buildGridCard(context, 'Đốt dây', 'assets/svg/dot_day.svg', Colors.grey[800]!),
                 ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'Các việc đang làm',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
-              ),
-              const SizedBox(height: 10),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 1.2,
-                children: [
-                  _buildGridCard(context, 'Đốt dây', 'assets/svg/dot_day.svg', Colors.grey[800]!),
-                  _buildGridCard(context, 'Ráp', 'assets/svg/rap.svg', Colors.grey[800]!),
-                ],
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'Các sản phẩm',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
-              ),
-              const SizedBox(height: 10),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 1.2,
-                children: [
-                  _buildGridCard(context, 'Cầu vồng', 'assets/svg/cau_vong.svg', null),
-                  _buildGridCard(context, 'Cửa lưới', 'assets/svg/ghim.svg', Colors.grey[800]!),
-                  _buildGridCard(context, 'Tổ ong', 'assets/svg/to_ong.svg', Colors.grey[800]!),
-                  _buildGridCard(context, 'Bạt', 'assets/svg/bat.svg', Colors.grey[800]!),
-                ],
-              ),
-            ],
-          ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2.2,
+                  child: _buildGridCard(context, 'Ráp', 'assets/svg/rap.svg', Colors.grey[800]!),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Các sản phẩm',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2.2,
+                  child: _buildGridCard(context, 'Cầu vồng', 'assets/svg/cau_vong.svg', null),
+                ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2.2,
+                  child: _buildGridCard(context, 'Cửa lưới', 'assets/svg/ghim.svg', Colors.grey[800]!),
+                ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2.2,
+                  child: _buildGridCard(context, 'Tổ ong', 'assets/svg/to_ong.svg', Colors.grey[800]!),
+                ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2.2,
+                  child: _buildGridCard(context, 'Bạt', 'assets/svg/bat.svg', Colors.grey[800]!),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -93,17 +100,17 @@ class SelectionPage extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 4),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               iconColor == null
-                  ? SvgPicture.asset(svgAsset, height: 56)
-                  : SvgPicture.asset(svgAsset, height: 56, color: iconColor),
-              const SizedBox(height: 12),
+                  ? SvgPicture.asset(svgAsset, width: 36, height: 36)
+                  : SvgPicture.asset(svgAsset, width: 36, height: 36, color: iconColor),
+              const SizedBox(height: 8),
               Text(
                 text,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87),
                 textAlign: TextAlign.center,
               ),
             ],
