@@ -17,6 +17,7 @@
         "image_picker",
         "intl",
         "permission_handler",
+        "provider",
         "qr_code_scanner_plus",
         "shared_preferences"
       ],
@@ -160,6 +161,15 @@
         "image_picker_macos",
         "image_picker_platform_interface",
         "image_picker_windows"
+      ]
+    },
+    {
+      "name": "provider",
+      "version": "6.1.5",
+      "dependencies": [
+        "collection",
+        "flutter",
+        "nested"
       ]
     },
     {
@@ -491,15 +501,6 @@
       "dependencies": []
     },
     {
-      "name": "provider",
-      "version": "6.1.5",
-      "dependencies": [
-        "collection",
-        "flutter",
-        "nested"
-      ]
-    },
-    {
       "name": "bloc",
       "version": "9.0.0",
       "dependencies": [
@@ -582,6 +583,13 @@
         "flutter",
         "flutter_plugin_android_lifecycle",
         "image_picker_platform_interface"
+      ]
+    },
+    {
+      "name": "nested",
+      "version": "1.0.0",
+      "dependencies": [
+        "flutter"
       ]
     },
     {
@@ -678,13 +686,6 @@
       "version": "2.1.8",
       "dependencies": [
         "meta"
-      ]
-    },
-    {
-      "name": "nested",
-      "version": "1.0.0",
-      "dependencies": [
-        "flutter"
       ]
     },
     {

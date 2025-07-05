@@ -19,11 +19,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; });
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token') ?? '';
     try {
       final data = await ApiCommon.changePassword(
-        token,
         _oldPasswordController.text,
         _newPasswordController.text,
         _confirmPasswordController.text,
