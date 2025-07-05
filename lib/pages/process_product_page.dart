@@ -139,7 +139,10 @@ class _ProcessProductPageState extends State<ProcessProductPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => ProcessDetailPage(processName: process.name),
+                                        builder: (context) => ProcessDetailPage(
+                                          processName: process.name,
+                                          processId: process.id,
+                                        ),
                                       ),
                                     );
                                   },

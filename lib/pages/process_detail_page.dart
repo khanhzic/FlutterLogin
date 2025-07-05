@@ -11,8 +11,21 @@ import '../services/api_common.dart';
 
 class ProcessDetailPage extends StatefulWidget {
   final String processName;
+  final int? processId;
+  final String? initialOrderCode;
+  final String? initialTotalQuantity;
+  final String? initialImplementQuantity;
+  final bool isContinue;
 
-  const ProcessDetailPage({super.key, required this.processName});
+  const ProcessDetailPage({
+    super.key,
+    required this.processName,
+    this.processId,
+    this.initialOrderCode,
+    this.initialTotalQuantity,
+    this.initialImplementQuantity,
+    this.isContinue = false,
+  });
 
   @override
   State<ProcessDetailPage> createState() => _ProcessDetailPageState();
@@ -31,16 +44,34 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   bool _isScanning = false;
   ProcessState _processState = ProcessState.idle;
   bool _isLoading = false;
+  String? _qrErrorMessage;
+  String? _processingAction; // 'end', 'pending', or null
+  String? _successMessage;
+  String? _initialImplementQuantity;
 
   @override
   void initState() {
     super.initState();
     _qrCodeController.addListener(_updateStartButtonState);
+    _quantityController.addListener(_updateStartButtonState);
+    // Initialize controllers if values are provided
+    if (widget.initialOrderCode != null) {
+      _qrCodeController.text = widget.initialOrderCode!;
+    }
+    if (widget.initialTotalQuantity != null) {
+      _quantityController.text = widget.initialTotalQuantity!;
+    }
+    // Optionally, you can store implement_quantity for use in API call
+    if (widget.initialImplementQuantity != null) {
+      // Store as a field if needed for API call
+      _initialImplementQuantity = widget.initialImplementQuantity!;
+    }
   }
 
   @override
   void dispose() {
     _qrCodeController.removeListener(_updateStartButtonState);
+    _quantityController.removeListener(_updateStartButtonState);
     _qrCodeController.dispose();
     _notesController.dispose();
     _quantityController.dispose();
@@ -50,7 +81,10 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
 
   void _updateStartButtonState() {
     setState(() {
-      _isStartButtonEnabled = _qrCodeController.text.isNotEmpty;
+      final qrValid = _qrCodeController.text.isNotEmpty && _isValidQRCode(_qrCodeController.text);
+      final qtyText = _quantityController.text.trim();
+      final qtyValid = qtyText.isNotEmpty && int.tryParse(qtyText) != null && int.parse(qtyText) > 0;
+      _isStartButtonEnabled = qrValid && qtyValid;
     });
   }
 
@@ -68,14 +102,52 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     this.controller = controller;
     controller.scannedDataStream.listen((scanData) {
       if (scanData.code != null) {
-        setState(() {
-          _qrCodeController.text = scanData.code!;
-          _isScanning = false;
-        });
+        final qrData = scanData.code!;
+        // Validate QR code format
+        if (_isValidQRCode(qrData)) {
+          setState(() {
+            _qrCodeController.text = qrData;
+            _isScanning = false;
+            _qrErrorMessage = null;
+          });
+        } else {
+          setState(() {
+            _qrErrorMessage = 'Mã sản phẩm không hợp lệ, hãy quét lại đúng mã!';
+            // Do NOT update _qrCodeController.text if invalid
+          });
+        }
+        // Always close scan screen after any scan
         controller.pauseCamera();
         Navigator.pop(context);
       }
     });
+  }
+
+  bool _isValidQRCode(String qrData) {
+    // Check if QR code matches format: <string>_<total_quantity>
+    // Example: "ABC123_50" or "ORDER001_100"
+    
+    // Check if it contains exactly one underscore
+    final parts = qrData.split('_');
+    if (parts.length != 2) {
+      return false;
+    }
+    
+    final orderCode = parts[0];
+    final quantityStr = parts[1];
+    
+    // Check if order code is not empty
+    if (orderCode.isEmpty) {
+      return false;
+    }
+    
+    // Check if quantity is a valid number
+    try {
+      final quantity = int.parse(quantityStr);
+      return quantity > 0; // Quantity must be positive
+    } catch (e) {
+      return false; // Quantity is not a valid number
+    }
   }
 
   void _scanQRCode() async {
@@ -156,49 +228,169 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     }
   }
 
-  Future<void> _callApi(String endpoint, Map<String, dynamic> data, {XFile? image}) async {
+  Future<bool> _callApi(String endpoint, Map<String, dynamic> data, {XFile? image}) async {
     setState(() { _isLoading = true; });
     try {
       final respData = await ApiCommon.processAction(endpoint: endpoint, data: data, image: image);
-      if (respData['success'] == true || respData['status'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thành công!')));
+      if (respData['status'] == "success" ) {
+        return true;
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(respData['message'] ?? 'Lỗi')));
+        _showErrorAlert(respData);
+        return false;
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      _showErrorAlert({'message': 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'});
+      return false;
     } finally {
       setState(() { _isLoading = false; });
     }
   }
 
+  void _showErrorAlert(Map<String, dynamic>? responseData) {
+    String errorMessage = 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên';
+    
+    if (responseData != null) {
+      // Check if there are validation errors
+      if (responseData['errors'] != null && responseData['errors'] is Map) {
+        final errors = responseData['errors'] as Map<String, dynamic>;
+        final errorMessages = <String>[];
+        
+        // Collect all error messages
+        errors.forEach((field, messages) {
+          if (messages is List) {
+            for (final message in messages) {
+              errorMessages.add('$field: $message');
+            }
+          } else if (messages is String) {
+            errorMessages.add('$field: $messages');
+          }
+        });
+        
+        if (errorMessages.isNotEmpty) {
+          errorMessage = errorMessages.join('\n');
+        }
+      } else if (responseData['message'] != null) {
+        // Use the general message if no specific errors
+        errorMessage = responseData['message'].toString();
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Lỗi'),
+          content: SingleChildScrollView(
+            child: Text(errorMessage),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Đóng'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _startProcess() async {
-    await _callApi('work/start', {
-      'order_code': _qrCodeController.text,
-      'process_id': widget.processName, // You may want to map processName to an ID
-      'total_quantity': _quantityController.text,
+    FocusScope.of(context).unfocus(); // Hide keyboard
+    // Parse total_quantity from QR code
+    int totalQuantity = 0;
+    int implementQuantity = 0;
+    final qrText = _qrCodeController.text;
+    final parts = qrText.split('_');
+    if (parts.length == 2) {
+      try {
+        totalQuantity = int.parse(parts[1]);
+      } catch (e) {}
+    }
+
+    // Use initialImplementQuantity if provided, else use the input
+    try {
+      if (_initialImplementQuantity != null) {
+        implementQuantity = int.parse(_initialImplementQuantity!);
+      } else {
+        implementQuantity = int.parse(_quantityController.text);
+      }
+    } catch (e) {}
+
+    final success = await _callApi('start-working', {
+      'order_code': parts[0],
+      'process_id': widget.processId,
+      'implement_quantity': implementQuantity,
+      'total_quantity': totalQuantity,
     });
-    setState(() { _processState = ProcessState.started; });
+    if (success) {
+      setState(() { _processState = ProcessState.started; });
+    }
   }
 
   Future<void> _endProcess() async {
-    await _callApi('work/end', {
-      'order_code': _qrCodeController.text,
-      'process_id': widget.processName,
+    setState(() { _processingAction = 'end'; });
+    // Parse total_quantity and implement_quantity as in _startProcess
+    int totalQuantity = 0;
+    int implementQuantity = 0;
+    final qrText = _qrCodeController.text;
+    final parts = qrText.split('_');
+    if (parts.length == 2) {
+      try {
+        totalQuantity = int.parse(parts[1]);
+      } catch (e) {}
+    }
+    try {
+      implementQuantity = int.parse(_quantityController.text);
+    } catch (e) {}
+    final success = await _callApi('end-working', {
+      'order_code': parts[0],
+      'process_id': widget.processId,
+      'implement_quantity': implementQuantity,
+      'total_quantity': totalQuantity,
     });
-    setState(() { _processState = ProcessState.done; });
+    if (success) {
+      setState(() {
+        _processState = ProcessState.done;
+        _successMessage = 'Đã cập nhật thành công!';
+      });
+    }
+    setState(() { _processingAction = null; });
   }
 
   Future<void> _pendingProcess() async {
+    setState(() { _processingAction = 'pending'; });
+    // Parse total_quantity and implement_quantity as in _startProcess
+    int totalQuantity = 0;
+    int implementQuantity = 0;
+    final qrText = _qrCodeController.text;
+    final parts = qrText.split('_');
+    if (parts.length == 2) {
+      try {
+        totalQuantity = int.parse(parts[1]);
+      } catch (e) {}
+    }
+    try {
+      implementQuantity = int.parse(_quantityController.text);
+    } catch (e) {}
     final result = await _showNoteAndImageDialog('Nhập chú thích và chọn ảnh cho trạng thái dừng');
     if (result != null && result['note'] != null && result['image'] != null) {
-      await _callApi('work/pending', {
-        'order_code': _qrCodeController.text,
-        'process_id': widget.processName,
+      final success = await _callApi('pending-working', {
+        'order_code': parts[0],
+        'process_id': widget.processId,
+        'implement_quantity': implementQuantity,
+        'total_quantity': totalQuantity,
         'note': result['note'],
       }, image: result['image']);
-      if (mounted) Navigator.of(context).pop();
+      if (success && mounted) {
+        setState(() {
+          _successMessage = 'Đã cập nhật thành công!';
+        });
+        Navigator.of(context).pop();
+      }
     }
+    setState(() { _processingAction = null; });
   }
 
   Future<void> _stopProcess() async {
@@ -206,7 +398,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     if (result != null && result['note'] != null && result['image'] != null) {
       await _callApi('work/stop', {
         'order_code': _qrCodeController.text,
-        'process_id': widget.processName,
+        'process_id': widget.processId,
         'note': result['note'],
       }, image: result['image']);
       if (mounted) Navigator.of(context).pop();
@@ -295,12 +487,21 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
             ElevatedButton.icon(
               onPressed: _scanQRCode,
               icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Scan QR Code'),
+              label: const Text('Quét mã QR sản phẩm'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 textStyle: const TextStyle(fontSize: 18),
               ),
             ),
+            if (_qrErrorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                child: Text(
+                  _qrErrorMessage!,
+                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             const SizedBox(height: 20),
             TextField(
               controller: _qrCodeController,
@@ -316,21 +517,24 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
               controller: _quantityController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: 'Nhập số lượng sản phẩm sẽ làm',
+                labelText: 'Số lượng sản phẩm thực hiện',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.numbers),
               ),
             ),
-            // const SizedBox(height: 20),
-            // TextField(
-            //   controller: _notesController,
-            //   decoration: const InputDecoration(
-            //     labelText: 'Ghi chú',
-            //     border: OutlineInputBorder(),
-            //     prefixIcon: Icon(Icons.note_alt),
-            //   ),
-            //   maxLines: 3,
-            //),
+            if (_successMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                child: Text(
+                  _successMessage!,
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             const SizedBox(height: 30),
             if (_processState == ProcessState.idle)
               ElevatedButton(
@@ -340,38 +544,46 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                   textStyle: const TextStyle(fontSize: 18),
                   backgroundColor: _isStartButtonEnabled ? Colors.blue : Colors.grey,
                 ),
-                child: _isLoading ? const CircularProgressIndicator() : const Text('Bắt đầu'),
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : Text(widget.isContinue ? 'Tiếp tục' : 'Bắt đầu'),
               ),
             if (_processState == ProcessState.started)
               Column(
                 children: [
                   const SizedBox(
-                    height: 48,
-                    width: 48,
+                    height: 64,
+                    width: 64,
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-                      strokeWidth: 6,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 69, 175, 220)),
+                      strokeWidth: 10,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 64),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      ElevatedButton(
-                        onPressed: !_isLoading ? _endProcess : null,
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                        child: _isLoading ? const CircularProgressIndicator() : const Text('Hoàn thành'),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: (!_isLoading || _processingAction == 'pending') ? _endProcess : null,
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                          child: (_isLoading && _processingAction == 'end')
+                              ? const CircularProgressIndicator()
+                              : const Text('Hoàn thành'),
+                        ),
                       ),
-                      ElevatedButton(
-                        onPressed: !_isLoading ? _pendingProcess : null,
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                        child: _isLoading ? const CircularProgressIndicator() : const Text('Dừng'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: (!_isLoading || _processingAction == 'end') ? _pendingProcess : null,
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                          child: (_isLoading && _processingAction == 'pending')
+                              ? const CircularProgressIndicator()
+                              : const Text('Dừng'),
+                        ),
                       ),
-                      // ElevatedButton(
-                      //   onPressed: !_isLoading ? _stopProcess : null,
-                      //   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      //   child: _isLoading ? const CircularProgressIndicator() : const Text('Báo lỗi'),
-                      // ),
                     ],
                   ),
                 ],

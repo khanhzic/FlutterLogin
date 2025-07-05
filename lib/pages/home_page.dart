@@ -11,6 +11,8 @@ import 'process_product_page.dart'; // Import the new ProcessProductPage
 import 'my_profile.dart';
 import '../services/api_common.dart';
 import '../services/master_data_service.dart';
+import '../config/app_config.dart';
+import '../widgets/profile_image_widget.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -128,33 +130,44 @@ class _HomePageState extends State<HomePage> {
       return const SizedBox.shrink(); // Return empty space if no working processes
     }
 
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.access_time,
-            color: Colors.orange,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Đang làm: ${workingProcesses.length} công việc',
-              style: TextStyle(
-                color: Colors.orange[700],
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 14,
+      crossAxisSpacing: 14,
+      childAspectRatio: 1.2,
+      children: workingProcesses.map((wp) {
+        final process = masterData?.processes.firstWhere(
+          (p) => p.id == wp.processId,
+          orElse: () => Process(id: 0, name: 'Unknown', code: ''),
+        );
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProcessDetailPage(
+                  processName: process?.name ?? '',
+                  processId: process?.id,
+                  initialOrderCode: wp.order.code,
+                  initialTotalQuantity: wp.order.totalQuantity?.toString(),
+                  initialImplementQuantity: wp.quantity.toString(),
+                  isContinue: true,
+                ),
               ),
-            ),
+            );
+          },
+          child: _buildGridCard(
+            context,
+            process?.name ?? '',
+            _getProcessIcon(process?.name ?? ''),
+            _getProcessColor(process?.name ?? ''),
+            product: null,
+            process: process,
           ),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 
@@ -182,7 +195,10 @@ class _HomePageState extends State<HomePage> {
             UserAccountsDrawerHeader(
               accountName: Text(user?.name ?? ''),
               accountEmail: Text(user?.email ?? ''),
-              currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
+              currentAccountPicture: ProfileImageWidget(
+                profilePhotoPath: user?.profilePhotoPath,
+                radius: 40.0,
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.account_circle),
@@ -278,6 +294,7 @@ class _HomePageState extends State<HomePage> {
                                 _getProcessIcon(process.name),
                                 _getProcessColor(process.name),
                                 product: null,
+                                process: process,
                               );
                             }).toList(),
                           )
@@ -290,7 +307,7 @@ class _HomePageState extends State<HomePage> {
                             crossAxisSpacing: 14,
                             childAspectRatio: 1.2,
                             children: [
-                              _buildGridCard(context, 'Đốt dây', AppIcons.burnWire, Colors.red, product: null),
+                              _buildGridCard(context, 'Đốt dây', AppIcons.burnWire, Colors.red, product: null, process: null),
                             ],
                           ),
                         const SizedBox(height: 30),
@@ -316,6 +333,7 @@ class _HomePageState extends State<HomePage> {
                               _getProductColor(product.name), 
                               isProduct: true,
                               product: product,
+                              process: null,
                             );
                           }).toList(),
                         )
@@ -337,7 +355,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildGridCard(BuildContext context, String text, IconData icon, Color iconColor, {bool isProduct = false, Product? product}) {
+  Widget _buildGridCard(BuildContext context, String text, IconData icon, Color iconColor, {bool isProduct = false, Product? product, Process? process}) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -358,7 +376,10 @@ class _HomePageState extends State<HomePage> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ProcessDetailPage(processName: text),
+                builder: (context) => ProcessDetailPage(
+                  processName: text,
+                  processId: process?.id,
+                ),
               ),
             );
           }

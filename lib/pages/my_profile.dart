@@ -11,6 +11,8 @@ import 'package:intl/intl.dart';
 import '../services/api_common.dart';
 import 'dart:core';
 import '../main.dart';
+import '../config/app_config.dart';
+import '../widgets/profile_image_widget.dart';
 
 
 class MyProfilePage extends StatefulWidget {
@@ -24,11 +26,18 @@ class MyProfilePage extends StatefulWidget {
 
 class _MyProfilePageState extends State<MyProfilePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  // Current month
   int completed = 0;
   int pending = 0;
   int error = 0;
   int transported = 0;
   int retransport = 0;
+  // Last month
+  int lastCompleted = 0;
+  int lastPending = 0;
+  int lastError = 0;
+  int lastTransported = 0;
+  int lastRetransport = 0;
   bool _loading = true;
 
   @override
@@ -44,15 +53,22 @@ class _MyProfilePageState extends State<MyProfilePage> {
       final data = (report != null && report is Map && report['data'] != null && report['data'] is Map)
           ? report['data'] as Map
           : <String, dynamic>{};
-      final stats = (data.isNotEmpty && data['statistics'] != null && data['statistics'] is Map)
+      final statistics = (data.isNotEmpty && data['statistics'] != null && data['statistics'] is Map)
           ? data['statistics'] as Map
           : <String, dynamic>{};
+      final current = statistics['current_month'] as Map? ?? {};
+      final last = statistics['last_month'] as Map? ?? {};
       setState(() {
-        completed = stats['completed'] ?? 0;
-        pending = stats['pending'] ?? 0;
-        error = stats['error'] ?? 0;
-        transported = stats['transported'] ?? 0;
-        retransport = stats['retransport'] ?? 0;
+        completed = current['completed'] ?? 0;
+        pending = current['pending'] ?? 0;
+        error = current['error'] ?? 0;
+        transported = current['transported'] ?? 0;
+        retransport = current['retransport'] ?? 0;
+        lastCompleted = last['completed'] ?? 0;
+        lastPending = last['pending'] ?? 0;
+        lastError = last['error'] ?? 0;
+        lastTransported = last['transported'] ?? 0;
+        lastRetransport = last['retransport'] ?? 0;
       });
     } catch (e) {
       // handle error if needed
@@ -92,7 +108,10 @@ class _MyProfilePageState extends State<MyProfilePage> {
               UserAccountsDrawerHeader(
                 accountName: Text(widget.user?.name ?? ''),
                 accountEmail: Text(widget.user?.email ?? ''),
-                currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
+                currentAccountPicture: ProfileImageWidget(
+                  profilePhotoPath: widget.user?.profilePhotoPath,
+                  radius: 40.0,
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.account_circle),
@@ -164,18 +183,18 @@ class _MyProfilePageState extends State<MyProfilePage> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Thống kê tháng $monthYear',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  'Thống kê tháng hiện tại: $monthYear',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 if (_loading)
                   const Center(child: CircularProgressIndicator()),
                 if (!_loading) ...[
                   GridView.count(
-                    crossAxisCount: 2,
+                    crossAxisCount: 3,
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
-                    childAspectRatio: 1, // square
+                    childAspectRatio: 0.75, // taller boxes
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
@@ -184,6 +203,27 @@ class _MyProfilePageState extends State<MyProfilePage> {
                       _buildStatCard(color: Colors.red, icon: Icons.error, title: 'Lỗi', count: error),
                       _buildStatCard(color: Colors.cyan, icon: Icons.local_shipping, title: 'Đã vận chuyển', count: transported),
                       _buildStatCard(color: Colors.grey, icon: Icons.refresh, title: 'Vận chuyển lại', count: retransport),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Thống kê tháng trước',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  GridView.count(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 0.75, // taller boxes
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildStatCard(color: Colors.green, icon: Icons.check, title: 'Hoàn thành', count: lastCompleted),
+                      _buildStatCard(color: Colors.yellow, icon: Icons.access_time, title: 'Đang làm', count: lastPending),
+                      _buildStatCard(color: Colors.red, icon: Icons.error, title: 'Lỗi', count: lastError),
+                      _buildStatCard(color: Colors.cyan, icon: Icons.local_shipping, title: 'Đã vận chuyển', count: lastTransported),
+                      _buildStatCard(color: Colors.grey, icon: Icons.refresh, title: 'Vận chuyển lại', count: lastRetransport),
                     ],
                   ),
                 ],
@@ -222,7 +262,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
                 child: Icon(icon, color: Colors.white, size: 28),
               ),
               const SizedBox(height: 10),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text('$count', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             ],
