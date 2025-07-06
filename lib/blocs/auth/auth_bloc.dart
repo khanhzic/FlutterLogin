@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_config.dart';
 import '../../services/api_common.dart';
+import '../../services/master_data_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc() : super(AuthInitial()) {
@@ -28,6 +29,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', accessToken);
         await prefs.setString('user', jsonEncode(userJson));
+        
+        // Call master data API after successful login
+        try {
+          await MasterDataService.getMasterData();
+        } catch (e) {
+          print('Error fetching master data after login: $e');
+          // Don't fail login if master data fails
+        }
+        
         emit(AuthSuccess(user));
       } else {
         emit(AuthFailure(data['message'] ?? 'Sai tài khoản hoặc mật khẩu'));
@@ -44,6 +54,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
     await prefs.remove('user');
+    
+    // Clear token from API cache
+    await ApiCommon.clearToken();
+    
     emit(AuthInitial());
   }
 } 
