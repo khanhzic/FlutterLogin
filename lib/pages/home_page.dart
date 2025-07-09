@@ -13,6 +13,7 @@ import '../services/api_common.dart';
 import '../services/master_data_service.dart';
 import '../config/app_config.dart';
 import '../widgets/profile_image_widget.dart';
+import 'about_page.dart'; // Import the new AboutPage
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -224,6 +225,17 @@ class _HomePageState extends State<HomePage> {
                     MaterialPageRoute(builder: (context) => HomePage()),
                   );
                 }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Giới thiệu'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AboutPage()),
+                );
               },
             ),
             ListTile(
