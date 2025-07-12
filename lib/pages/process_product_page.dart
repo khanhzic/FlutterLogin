@@ -30,7 +30,7 @@ class _ProcessProductPageState extends State<ProcessProductPage> {
     });
 
     try {
-      final masterData = await MasterDataService.getMasterData();
+      final masterData = await MasterDataService.getMasterData(context);
       if (masterData != null) {
         final productProcesses = masterData.getProcessesByProductId(widget.product.id);
         setState(() {

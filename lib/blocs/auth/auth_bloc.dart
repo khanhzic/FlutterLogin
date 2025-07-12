@@ -32,7 +32,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         
         // Call master data API after successful login
         try {
-          await MasterDataService.getMasterData();
+          // Cần truyền context từ widget xuống bloc khi gọi hàm này
+          // await MasterDataService.getMasterData(context);
         } catch (e) {
           print('Error fetching master data after login: $e');
           // Don't fail login if master data fails

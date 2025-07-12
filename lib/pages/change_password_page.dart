@@ -21,6 +21,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     setState(() { _isLoading = true; });
     try {
       final data = await ApiCommon.changePassword(
+        context,
         _oldPasswordController.text,
         _newPasswordController.text,
         _confirmPasswordController.text,

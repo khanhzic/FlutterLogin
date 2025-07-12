@@ -235,7 +235,12 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   Future<bool> _callApi(String endpoint, Map<String, dynamic> data, {XFile? image}) async {
     setState(() { _isLoading = true; });
     try {
-      final respData = await ApiCommon.processAction(endpoint: endpoint, data: data, image: image);
+      final respData = await ApiCommon.processAction(
+        context: context,
+        endpoint: endpoint,
+        data: data,
+        image: image,
+      );
       if (respData['status'] == "success" ) {
         return true;
       } else {

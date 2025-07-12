@@ -32,7 +32,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (await ApiCommon.checkAndHandleTokenExpired(context)) return;
+      _loadUserData();
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -55,11 +58,11 @@ class _HomePageState extends State<HomePage> {
       // Load master data
       if (token != null) {
         // First try to get cached data
-        var masterDataResult = await MasterDataService.getMasterData();
+        var masterDataResult = await MasterDataService.getMasterData(context);
         
         // If master data is null, force refresh from API
         if (masterDataResult == null) {
-          masterDataResult = await MasterDataService.getMasterData(forceRefresh: true);
+          masterDataResult = await MasterDataService.getMasterData(context, forceRefresh: true);
         }
         
         if (masterDataResult != null) {
@@ -71,7 +74,7 @@ class _HomePageState extends State<HomePage> {
 
       // Call API to get user data with working processes
       if (token != null) {
-        final userData = await ApiCommon.getUserData();
+        final userData = await ApiCommon.getUserData(context);
         if (userData != null && userData['working_processes'] != null) {
           final processesList = userData['working_processes'] as List;
           setState(() {
@@ -97,7 +100,7 @@ class _HomePageState extends State<HomePage> {
     
     if (token != null) {
       // Force refresh master data
-      final masterDataResult = await MasterDataService.getMasterData(forceRefresh: true);
+      final masterDataResult = await MasterDataService.getMasterData(context, forceRefresh: true);
       if (masterDataResult != null) {
         setState(() {
           masterData = masterDataResult;
@@ -105,7 +108,7 @@ class _HomePageState extends State<HomePage> {
       }
       
       // Refresh user data with working processes
-      final userData = await ApiCommon.getUserData();
+      final userData = await ApiCommon.getUserData(context);
       if (userData != null && userData['working_processes'] != null) {
         final processesList = userData['working_processes'] as List;
         setState(() {
