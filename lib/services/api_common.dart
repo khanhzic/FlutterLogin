@@ -7,6 +7,13 @@ import '../widgets/loading_overlay.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:flutter/material.dart';
 
+class TokenExpiredException implements Exception {
+  final String message;
+  TokenExpiredException([this.message = 'Token đã hết hạn']);
+  @override
+  String toString() => message;
+}
+
 class ApiCommon {
   static LoadingManager? _loadingManager;
   static const String _tokenKey = 'access_token';
@@ -77,30 +84,27 @@ class ApiCommon {
   }
 
   /// Kiểm tra token hết hạn, nếu hết hạn thì xóa token, user và chuyển về màn hình login
-  static Future<bool> checkAndHandleTokenExpired(BuildContext context) async {
+  static Future<void> checkAndHandleTokenExpired() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_tokenKey);
     if (token == null || token.isEmpty || JwtDecoder.isExpired(token)) {
       await prefs.remove(_tokenKey);
       await prefs.remove('user');
-      // Chuyển về màn hình đăng nhập nếu có context
-      if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-      }
-      return true;
+      throw TokenExpiredException();
     }
-    return false;
   }
 
   /// Hàm generic kiểm tra token hết hạn trước khi gọi API
   static Future<T> withTokenCheck<T>(BuildContext context, Future<T> Function() apiCall) async {
-    if (await checkAndHandleTokenExpired(context)) {
+    try {
+      await checkAndHandleTokenExpired();
+      return await apiCall();
+    } on TokenExpiredException {
       if (T == Map<String, dynamic>) {
         return <String, dynamic>{} as T;
       }
       throw Exception('Token expired');
     }
-    return await apiCall();
   }
 
   /// Hàm generic kiểm tra token hết hạn và status 401 cho mọi API
@@ -109,20 +113,17 @@ class ApiCommon {
     required Future<http.Response> Function() apiRequest,
     required T Function(http.Response) onSuccess,
   }) async {
-    if (await checkAndHandleTokenExpired(context)) {
-      if (T == Map<String, dynamic>) return <String, dynamic>{} as T;
-      throw Exception('Token expired');
-    }
-    final response = await apiRequest();
-    if (response.statusCode == 401) {
-      await clearToken();
-      if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    try {
+      await checkAndHandleTokenExpired();
+      final response = await apiRequest();
+      if (response.statusCode == 401) {
+        await clearToken();
+        throw TokenExpiredException();
       }
-      if (T == Map<String, dynamic>) return <String, dynamic>{} as T;
-      throw Exception('Token expired');
+      return onSuccess(response);
+    } on TokenExpiredException {
+      rethrow;
     }
-    return onSuccess(response);
   }
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
