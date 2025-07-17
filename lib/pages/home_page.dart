@@ -13,6 +13,8 @@ import '../services/api_common.dart';
 import '../services/master_data_service.dart';
 import '../config/app_config.dart';
 import '../widgets/profile_image_widget.dart';
+import 'delivery_page.dart'; // Import the new DeliveryPage
+import 'complete_delivery_page.dart'; // Import the new CompleteDeliveryPage
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -171,8 +173,141 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Drawer _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          UserAccountsDrawerHeader(
+            accountName: Text(user?.name ?? ''),
+            accountEmail: Text(user?.email ?? ''),
+            currentAccountPicture: ProfileImageWidget(
+              profilePhotoPath: user?.profilePhotoPath,
+              radius: 40.0,
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_circle),
+            title: const Text('Tài khoản'),
+            onTap: () {
+              Navigator.pop(context);
+              if (user != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MyProfilePage(user: user!)),
+                );
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.work_sharp),
+            title: const Text('Công việc'),
+            onTap: () {
+              Navigator.pop(context);
+              if (user != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomePage()),
+                );
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.lock),
+            title: const Text('Đổi mật khẩu'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Đăng xuất'),
+            onTap: () {
+              Navigator.pop(context);
+              _handleLogout(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Check user role
+    final userRole = user?.role;
+    if (userRole == '$DELIVERY_USER_ROLE') {
+      // Only show the 'Vận chuyển' and 'Hoàn thành' buttons for transporter role
+      return Scaffold(
+        key: _scaffoldKey,
+        appBar: AppBar(
+          title: const Text('Công việc hôm nay'),
+          leading: IconButton(
+            icon: const Icon(Icons.menu),
+            tooltip: 'Open menu',
+            onPressed: () {
+              _scaffoldKey.currentState?.openDrawer();
+            },
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        drawer: _buildDrawer(),
+        backgroundColor: const Color(0xFFF7F8FA),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Center(
+                child: Image.asset(
+                  'assets/images/logo_winsun.png',
+                  height: 60,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 60),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.local_shipping),
+                label: const Text('Vận chuyển', style: TextStyle(fontSize: 20)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DeliveryPage()),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Hoàn thành', style: TextStyle(fontSize: 20)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  backgroundColor: Colors.green,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CompleteDeliveryPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -188,66 +323,7 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
         centerTitle: true,
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            UserAccountsDrawerHeader(
-              accountName: Text(user?.name ?? ''),
-              accountEmail: Text(user?.email ?? ''),
-              currentAccountPicture: ProfileImageWidget(
-                profilePhotoPath: user?.profilePhotoPath,
-                radius: 40.0,
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.account_circle),
-              title: const Text('Tài khoản'),
-              onTap: () {
-                Navigator.pop(context);
-                if (user != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => MyProfilePage(user: user!)),
-                  );
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.account_circle),
-              title: const Text('Công việc'),
-              onTap: () {
-                Navigator.pop(context);
-                if (user != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => HomePage()),
-                  );
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.lock),
-              title: const Text('Đổi mật khẩu'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Đăng xuất'),
-              onTap: () {
-                Navigator.pop(context);
-                _handleLogout(context);
-              },
-            ),
-          ],
-        ),
-      ),
+      drawer: _buildDrawer(),
       backgroundColor: const Color(0xFFF7F8FA),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
