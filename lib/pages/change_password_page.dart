@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_common.dart';
+import '../splash_screen.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -26,27 +27,48 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         _newPasswordController.text,
         _confirmPasswordController.text,
       );
-      if (data['success'] == true || data['status'] == true) {
+      
+      // Kiểm tra response status
+      final status = data['status'];
+      final message = data['message'] ?? '';
+      
+      if (status == 'success' || status == true || data['success'] == true) {
+        // Thành công - Logout và chuyển về trang login
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Thành công'),
-            content: const Text('Thay đổi mật khẩu thành công'),
+            content: Text(message.isNotEmpty ? message : 'Thay đổi mật khẩu thành công. Bạn sẽ được đăng xuất để đăng nhập lại.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () async {
+                  Navigator.of(context).pop(); // Đóng dialog
+                  
+                  // Xóa token và user data
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove('access_token');
+                  await prefs.remove('user');
+                  
+                  // Chuyển về trang login và xóa toàn bộ navigation stack
+                  if (mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => const SplashScreen()),
+                      (route) => false,
+                    );
+                  }
+                },
                 child: const Text('OK'),
               ),
             ],
           ),
         );
-        Navigator.of(context).pop();
       } else {
+        // Lỗi
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Lỗi'),
-            content: Text(data['message'] ?? 'Đã xảy ra lỗi'),
+            content: Text(message.isNotEmpty ? message : 'Đã xảy ra lỗi khi thay đổi mật khẩu'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -61,7 +83,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Lỗi'),
-          content: Text(e.toString()),
+          content: Text('Có lỗi xảy ra: ${e.toString()}'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),

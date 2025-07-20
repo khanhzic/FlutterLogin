@@ -39,13 +39,14 @@ class _HomePageState extends State<HomePage> with RouteAware {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         await ApiCommon.checkAndHandleTokenExpired();
+        // Chỉ gọi _loadUserData nếu token hợp lệ
+        _loadUserData();
       } on TokenExpiredException {
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
         }
-        return;
+        // Không gọi _loadUserData nữa!
       }
-      _loadUserData();
     });
   }
 
@@ -220,6 +221,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
                       builder: (context) => HandleDetailPage(
                         code: wp.order.code,
                         processId: wp.processId,
+                        status: wp.status, // Truyền status sang
+                        orderId: wp.order.id, // Thêm dòng này
                       ),
                     ),
                   );
@@ -235,7 +238,14 @@ class _HomePageState extends State<HomePage> with RouteAware {
                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
                         textAlign: TextAlign.center,
                       ),
-                      if (wp.startTime.isNotEmpty) ...[
+                      if (wp.status == 3 && wp.createdAt.isNotEmpty) ...[
+                        Text(
+                          _formatPausedTime(wp.createdAt),
+                          style: const TextStyle(fontSize: 13, color: Colors.red, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ]
+                      else if (wp.startTime.isNotEmpty) ...[
                         Text(
                           _formatStartTime(wp.startTime),
                           style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.bold),
@@ -256,9 +266,23 @@ class _HomePageState extends State<HomePage> with RouteAware {
   String _formatStartTime(String startTime) {
     try {
       final dt = DateFormat('yyyy-MM-dd HH:mm:ss').parse(startTime);
-      return 'Bắt đầu lúc: ${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour}h:${dt.minute.toString().padLeft(2, '0')}';
+      return 'Bắt đầu lúc: 	${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour}h:${dt.minute.toString().padLeft(2, '0')}';
     } catch (e) {
       return 'Bắt đầu lúc: $startTime';
+    }
+  }
+
+  String _formatPausedTime(String pausedTime) {
+    try {
+      final dt = DateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(pausedTime);
+      return 'Tạm dừng lúc: 	${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour}h:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      try {
+        final dt = DateFormat('yyyy-MM-dd HH:mm:ss').parse(pausedTime);
+        return 'Tạm dừng lúc: ${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour}h:${dt.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        return 'Tạm dừng lúc: $pausedTime';
+      }
     }
   }
 

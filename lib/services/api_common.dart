@@ -200,7 +200,7 @@ class ApiCommon {
       context: context,
       apiRequest: () async {
         final token = await getToken();
-        final url = '$baseUrl/users/change_password';
+        final url = '$baseUrl/users/change-password';
         final headers = {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -227,7 +227,7 @@ class ApiCommon {
       throw Exception('Token đã hết hạn. Vui lòng đăng nhập lại.');
     }
     final token = await getToken();
-    final url = '$baseUrl/users/change_password';
+    final url = '$baseUrl/api/v1/users/change-password';
     final headers = {
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -325,7 +325,7 @@ class ApiCommon {
         
         var request = http.MultipartRequest('POST', Uri.parse(url));
         request.fields.addAll(data.map((k, v) => MapEntry(k, v.toString())));
-        request.files.add(await http.MultipartFile.fromPath('evident', image.path));
+        request.files.add(await http.MultipartFile.fromPath('file_upload', image.path));
         if (token != null && token.isNotEmpty) {
           request.headers['Authorization'] = 'Bearer $token';
         }
@@ -356,7 +356,7 @@ class ApiCommon {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(url));
       request.fields.addAll(data.map((k, v) => MapEntry(k, v.toString())));
-      request.files.add(await http.MultipartFile.fromPath('evident', image.path));
+      request.files.add(await http.MultipartFile.fromPath('file_upload', image.path));
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $token';
       }

@@ -150,54 +150,50 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   }
 
   void _scanQRCode() async {
-    // bool hasPermission = await _requestCameraPermission();
-    // if (!hasPermission) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(
-    //       content: Text('Cần quyền truy cập camera để quét mã QR'),
-    //       duration: Duration(seconds: 2),
-    //     ),
-    //   );
-    //   return;
-    // }
+    bool hasPermission = await _requestCameraPermission();
+    if (!hasPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cần quyền truy cập camera để quét mã QR'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
-    // setState(() {
-    //   _isScanning = true;
-    // });
-    // await Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => Scaffold(
-    //       appBar: AppBar(
-    //         title: const Text('Quét mã QR'),
-    //         leading: IconButton(
-    //           icon: const Icon(Icons.arrow_back),
-    //           onPressed: () {
-    //             setState(() {
-    //               _isScanning = false;
-    //             });
-    //             Navigator.pop(context);
-    //           },
-    //         ),
-    //       ),
-    //       body: QRView(
-    //         key: qrKey,
-    //         onQRViewCreated: _onQRViewCreated,
-    //         overlay: QrScannerOverlayShape(
-    //           borderColor: Colors.green,
-    //           borderRadius: 10,
-    //           borderLength: 30,
-    //           borderWidth: 10,
-    //           cutOutSize: MediaQuery.of(context).size.width * 0.8,
-    //         ),
-    //       ),
-    //     ),
-    //   ),
-    // );
-    // BYPASS: Gán giá trị cố định cho QR Code
     setState(() {
-      _qrCodeController.text = 'ORDER003_105'; // Giá trị fix cứng
+      _isScanning = true;
     });
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Quét mã QR'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                setState(() {
+                  _isScanning = false;
+                });
+                Navigator.pop(context);
+              },
+            ),
+          ),
+          body: QRView(
+            key: qrKey,
+            onQRViewCreated: _onQRViewCreated,
+            overlay: QrScannerOverlayShape(
+              borderColor: Colors.green,
+              borderRadius: 10,
+              borderLength: 30,
+              borderWidth: 10,
+              cutOutSize: MediaQuery.of(context).size.width * 0.8,
+            ),
+          ),
+        ),
+      ),
+    );
     _updateStartButtonState();
   }
 
@@ -541,7 +537,16 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                     ? const CircularProgressIndicator()
                     : Text(widget.isContinue ? 'Tiếp tục' : 'Bắt đầu'),
               ),
-            // Xóa phần hiển thị các nút Hoàn thành, Dừng, loading khi đã bắt đầu
+            // Các nút khác đã được comment lại theo yêu cầu
+            // if (_processState == ProcessState.started)
+            //   ...
+            // if (_processState == ProcessState.done)
+            //   ...
+            // if (_processState == ProcessState.pending)
+            //   ...
+            // if (_processState == ProcessState.error)
+            //   ...
+            // Các nút Hoàn thành, Dừng, loading khi đã bắt đầu đều đã comment lại
           ],
         ),
       ),

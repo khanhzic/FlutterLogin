@@ -6,7 +6,9 @@ import '../services/api_common.dart';
 class HandleDetailPage extends StatefulWidget {
   final String? code;
   final int? processId;
-  const HandleDetailPage({Key? key, this.code, this.processId}) : super(key: key);
+  final int? status; // Thêm dòng này
+  final int? orderId; // Thêm dòng này
+  const HandleDetailPage({Key? key, this.code, this.processId, this.status, this.orderId}) : super(key: key);
 
   @override
   State<HandleDetailPage> createState() => _HandleDetailPageState();
@@ -19,8 +21,42 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
 
+  // Hàm restart process
+  Future<void> _restartProcess() async {
+    setState(() { _isLoading = true; });
+    try {
+      final respData = await ApiCommon.processAction(
+        context: context,
+        endpoint: 'restart-working',
+        data: {
+          'order_id': widget.orderId, // Đúng là orderId kiểu số nguyên
+          'process_id': widget.processId,
+        },
+      );
+      if (respData['status'] == 'success' || respData['message']?.toString().toLowerCase().contains('thành công') == true) {
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      } else {
+        _showErrorAlert(respData);
+      }
+    } catch (e) {
+      _showErrorAlert({'message': 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'});
+    } finally {
+      setState(() { _isLoading = false; });
+    }
+  }
+
   int get _quantity => int.tryParse(_quantityController.text) ?? 0;
-  bool get _canComplete => _imageFile != null && _quantity > 0;
+  bool get _canComplete {
+    const needImageProcessIds = [11, 12, 20, 21, 31, 32, 37, 38];
+    final requireImage = needImageProcessIds.contains(widget.processId);
+    if (requireImage) {
+      return _imageFile != null && _quantity > 0;
+    } else {
+      return _quantity > 0;
+    }
+  }
 
   Future<void> _pickImage() async {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.camera);
@@ -44,6 +80,14 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
     if (!_canComplete || widget.code == null || widget.processId == null) return;
     setState(() { _isLoading = true; });
     try {
+      // Danh sách processId cần ảnh
+      const needImageProcessIds = [11, 12, 20, 21, 31, 32, 37, 38];
+      final requireImage = needImageProcessIds.contains(widget.processId);
+      if (requireImage && _imageFile == null) {
+        _showErrorAlert({'message': 'Vui lòng chọn hoặc chụp ảnh trước khi hoàn thành.'});
+        setState(() { _isLoading = false; });
+        return;
+      }
       final respData = await ApiCommon.processAction(
         context: context,
         endpoint: 'end-working',
@@ -54,7 +98,37 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
           'total_quantity': 0,
           'note': _noteController.text,
         },
-        image: _imageFile != null ? XFile(_imageFile!.path) : null,
+        image: (requireImage && _imageFile != null) ? XFile(_imageFile!.path) : null,
+      );
+      if (respData['status'] == 'success') {
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      } else {
+        _showErrorAlert(respData);
+      }
+    } on TokenExpiredException {
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      }
+    } catch (e) {
+      _showErrorAlert({'message': 'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin'});
+    } finally {
+      setState(() { _isLoading = false; });
+    }
+  }
+
+  Future<void> _onPause() async {
+    if (widget.code == null || widget.processId == null) return;
+    setState(() { _isLoading = true; });
+    try {
+      final respData = await ApiCommon.processAction(
+        context: context,
+        endpoint: 'pending-working',
+        data: {
+          'order_code': widget.code!,
+          'process_id': widget.processId!,
+        },
       );
       if (respData['status'] == 'success') {
         if (mounted) {
@@ -126,6 +200,59 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Nếu trạng thái là tạm dừng (status == 3) thì chỉ hiển thị mã và nút Bắt đầu lại
+    if (widget.status == 3) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Chi tiết công việc'),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  widget.code ?? 'Không có mã',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _restartProcess,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  textStyle: const TextStyle(fontSize: 18),
+                ),
+                child: _isLoading
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Bắt đầu lại'),
+              ),
+            ],
+          ),
+        ),
+        backgroundColor: const Color(0xFFF7F8FA),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chi tiết công việc'),
@@ -237,7 +364,7 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : () {},
+                        onPressed: _isLoading ? null : _onPause,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           padding: const EdgeInsets.symmetric(vertical: 20),
