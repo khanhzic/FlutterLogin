@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/master_data.dart';
 import 'api_common.dart';
+import 'package:flutter/widgets.dart'; // Added for BuildContext
 
 class MasterDataService {
   static const String _masterDataKey = 'master_data';
   static const String _masterDataTimestampKey = 'master_data_timestamp';
   static const int _cacheDurationDays = 7; // 1 week
 
-  static Future<MasterData?> getMasterData({bool forceRefresh = false}) async {
+  static Future<MasterData?> getMasterData(BuildContext context, {bool forceRefresh = false}) async {
     final prefs = await SharedPreferences.getInstance();
     
     // Check if we should use cached data
@@ -21,7 +22,7 @@ class MasterDataService {
 
     // Fetch fresh data from API
     try {
-      final response = await ApiCommon.getMasterData();
+      final response = await ApiCommon.getMasterData(context);
       if (response != null && response['status'] == 'success') {
         final masterData = MasterData.fromJson(response);
         

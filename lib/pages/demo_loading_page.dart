@@ -22,7 +22,7 @@ class _DemoLoadingPageState extends State<DemoLoadingPage> {
 
   Future<void> _testApiCall() async {
     try {
-      final result = await ApiCommon.getUserReport();
+      final result = await ApiCommon.getUserReport(context);
       setState(() {
         _result = 'API call completed: ${result != null ? 'Success' : 'Failed'}';
       });

@@ -13,6 +13,11 @@ import '../services/api_common.dart';
 import '../services/master_data_service.dart';
 import '../config/app_config.dart';
 import '../widgets/profile_image_widget.dart';
+import 'about_page.dart'; // Import the new AboutPage
+import '../main.dart'; // Để dùng routeObserver
+import 'package:intl/intl.dart'; // Thêm dòng này để dùng DateFormat
+import 'handle_detail_page.dart'; // Import the new HandleDetailPage
+import '../services/api_common.dart' show TokenExpiredException;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,7 +26,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with RouteAware {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   User? user;
   List<WorkingProcess> workingProcesses = [];
@@ -31,7 +36,39 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await ApiCommon.checkAndHandleTokenExpired();
+        // Chỉ gọi _loadUserData nếu token hợp lệ
+        _loadUserData();
+      } on TokenExpiredException {
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        }
+        // Không gọi _loadUserData nữa!
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when coming back to this page
+    _loadUserData(); // Gọi lại API
   }
 
   Future<void> _loadUserData() async {
@@ -54,11 +91,11 @@ class _HomePageState extends State<HomePage> {
       // Load master data
       if (token != null) {
         // First try to get cached data
-        var masterDataResult = await MasterDataService.getMasterData();
+        var masterDataResult = await MasterDataService.getMasterData(context);
         
         // If master data is null, force refresh from API
         if (masterDataResult == null) {
-          masterDataResult = await MasterDataService.getMasterData(forceRefresh: true);
+          masterDataResult = await MasterDataService.getMasterData(context, forceRefresh: true);
         }
         
         if (masterDataResult != null) {
@@ -70,13 +107,23 @@ class _HomePageState extends State<HomePage> {
 
       // Call API to get user data with working processes
       if (token != null) {
-        final userData = await ApiCommon.getUserData();
+        final userData = await ApiCommon.getUserData(context);
         if (userData != null && userData['working_processes'] != null) {
           final processesList = userData['working_processes'] as List;
+          List<WorkingProcess> sortedProcesses = processesList
+              .map((process) => WorkingProcess.fromJson(process))
+              .toList();
+          // Sắp xếp theo startTime tăng dần
+          sortedProcesses.sort((a, b) {
+            DateTime? aTime = DateTime.tryParse(a.startTime);
+            DateTime? bTime = DateTime.tryParse(b.startTime);
+            if (aTime == null && bTime == null) return 0;
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            return aTime.compareTo(bTime);
+          });
           setState(() {
-            workingProcesses = processesList
-                .map((process) => WorkingProcess.fromJson(process))
-                .toList();
+            workingProcesses = sortedProcesses;
           });
         }
       }
@@ -96,7 +143,7 @@ class _HomePageState extends State<HomePage> {
     
     if (token != null) {
       // Force refresh master data
-      final masterDataResult = await MasterDataService.getMasterData(forceRefresh: true);
+      final masterDataResult = await MasterDataService.getMasterData(context, forceRefresh: true);
       if (masterDataResult != null) {
         setState(() {
           masterData = masterDataResult;
@@ -104,13 +151,23 @@ class _HomePageState extends State<HomePage> {
       }
       
       // Refresh user data with working processes
-      final userData = await ApiCommon.getUserData();
+      final userData = await ApiCommon.getUserData(context);
       if (userData != null && userData['working_processes'] != null) {
         final processesList = userData['working_processes'] as List;
+        List<WorkingProcess> sortedProcesses = processesList
+            .map((process) => WorkingProcess.fromJson(process))
+            .toList();
+        // Sắp xếp theo startTime tăng dần
+        sortedProcesses.sort((a, b) {
+          DateTime? aTime = DateTime.tryParse(a.startTime);
+          DateTime? bTime = DateTime.tryParse(b.startTime);
+          if (aTime == null && bTime == null) return 0;
+          if (aTime == null) return 1;
+          if (bTime == null) return -1;
+          return aTime.compareTo(bTime);
+        });
         setState(() {
-          workingProcesses = processesList
-              .map((process) => WorkingProcess.fromJson(process))
-              .toList();
+          workingProcesses = sortedProcesses;
         });
       }
     }
@@ -130,44 +187,151 @@ class _HomePageState extends State<HomePage> {
       return const SizedBox.shrink(); // Return empty space if no working processes
     }
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 14,
-      crossAxisSpacing: 14,
-      childAspectRatio: 1.2,
-      children: workingProcesses.map((wp) {
-        final process = masterData?.processes.firstWhere(
-          (p) => p.id == wp.processId,
-          orElse: () => Process(id: 0, name: 'Unknown', code: ''),
-        );
-        return GestureDetector(
-          onTap: () {
+    // Tính toán width cho vừa 2 card trên màn hình
+    final double cardWidth = MediaQuery.of(context).size.width / 2.2;
+    return SizedBox(
+      height: 170, // Chiều cao card, chỉnh cho phù hợp
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: workingProcesses.length,
+        itemBuilder: (context, index) {
+          final wp = workingProcesses[index];
+          final process = masterData?.processes.firstWhere(
+            (p) => p.id == wp.processId,
+            orElse: () => Process(id: 0, name: 'Unknown', code: ''),
+          );
+          return Container(
+            width: cardWidth,
+            margin: EdgeInsets.only(
+              left: index == 0 ? 16 : 8,
+              right: index == workingProcesses.length - 1 ? 16 : 8,
+            ),
+            child: Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              color: Colors.white,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HandleDetailPage(
+                        code: wp.order.code,
+                        processId: wp.processId,
+                        status: wp.status, // Truyền status sang
+                        orderId: wp.order.id, // Thêm dòng này
+                      ),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Icon(_getProcessIcon(process?.name ?? ''), size: 44, color: _getProcessColor(process?.name ?? '')),
+                      Text(
+                        process?.name ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (wp.status == 3 && wp.createdAt.isNotEmpty) ...[
+                        Text(
+                          _formatPausedTime(wp.createdAt),
+                          style: const TextStyle(fontSize: 13, color: Colors.red, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ]
+                      else if (wp.startTime.isNotEmpty) ...[
+                        Text(
+                          _formatStartTime(wp.startTime),
+                          style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatStartTime(String startTime) {
+    try {
+      final dt = DateFormat('yyyy-MM-dd HH:mm:ss').parse(startTime);
+      return 'Bắt đầu lúc: 	${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour}h:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return 'Bắt đầu lúc: $startTime';
+    }
+  }
+
+  String _formatPausedTime(String pausedTime) {
+    try {
+      final dt = DateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(pausedTime);
+      return 'Tạm dừng lúc: 	${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour}h:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      try {
+        final dt = DateFormat('yyyy-MM-dd HH:mm:ss').parse(pausedTime);
+        return 'Tạm dừng lúc: ${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour}h:${dt.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        return 'Tạm dừng lúc: $pausedTime';
+      }
+    }
+  }
+
+  // Card cho sản phẩm (code cũ, không có thời gian, style cũ)
+  Widget _buildProductCard(BuildContext context, String text, IconData icon, Color iconColor, {Product? product, Process? process}) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      color: Colors.white,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          if (product != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProcessProductPage(screenAction: text, product: product),
+              ),
+            );
+          } else if (process != null) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ProcessDetailPage(
-                  processName: process?.name ?? '',
-                  processId: process?.id,
-                  initialOrderCode: wp.order.code,
-                  initialTotalQuantity: wp.order.totalQuantity?.toString(),
-                  initialImplementQuantity: wp.quantity.toString(),
-                  isContinue: true,
+                  processName: text,
+                  processId: process.id,
                 ),
               ),
             );
-          },
-          child: _buildGridCard(
-            context,
-            process?.name ?? '',
-            _getProcessIcon(process?.name ?? ''),
-            _getProcessColor(process?.name ?? ''),
-            product: null,
-            process: process,
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 56, color: iconColor),
+              const SizedBox(height: 12),
+              Text(
+                text,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-        );
-      }).toList(),
+        ),
+      ),
     );
   }
 
@@ -224,6 +388,17 @@ class _HomePageState extends State<HomePage> {
                     MaterialPageRoute(builder: (context) => HomePage()),
                   );
                 }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Giới thiệu'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AboutPage()),
+                );
               },
             ),
             ListTile(
@@ -326,12 +501,11 @@ class _HomePageState extends State<HomePage> {
                           crossAxisSpacing: 14,
                           childAspectRatio: 1.2,
                           children: masterData!.products.map((product) {
-                            return _buildGridCard(
+                            return _buildProductCard(
                               context, 
                               product.name, 
                               _getProductIcon(product.name), 
                               _getProductColor(product.name), 
-                              isProduct: true,
                               product: product,
                               process: null,
                             );
@@ -355,7 +529,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildGridCard(BuildContext context, String text, IconData icon, Color iconColor, {bool isProduct = false, Product? product, Process? process}) {
+  Widget _buildGridCard(BuildContext context, String text, IconData icon, Color iconColor, {bool isProduct = false, Product? product, Process? process, String? startTime}) {
+    String? formattedStartTime;
+    if (startTime != null && startTime.isNotEmpty) {
+      try {
+        final dt = DateFormat('yyyy-MM-dd HH:mm:ss').parse(startTime);
+        formattedStartTime = 'Bắt đầu lúc: ${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour}h:${dt.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        formattedStartTime = 'Bắt đầu lúc: $startTime';
+      }
+    }
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -385,17 +568,23 @@ class _HomePageState extends State<HomePage> {
           }
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8), // giảm padding dọc
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Đẩy thời gian xuống dưới cùng
             children: [
-              Icon(icon, size: 56, color: iconColor),
-              const SizedBox(height: 12),
+              Icon(icon, size: 44, color: iconColor), // giảm icon size
               Text(
                 text,
                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
                 textAlign: TextAlign.center,
               ),
+              if (formattedStartTime != null) ...[
+                Text(
+                  formattedStartTime,
+                  style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),

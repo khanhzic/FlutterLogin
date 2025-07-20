@@ -13,6 +13,7 @@ import 'dart:core';
 import '../main.dart';
 import '../config/app_config.dart';
 import '../widgets/profile_image_widget.dart';
+import '../pages/about_page.dart';
 
 
 class MyProfilePage extends StatefulWidget {
@@ -49,7 +50,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
   Future<void> fetchStats() async {
     setState(() { _loading = true; });
     try {
-      final report = await ApiCommon.getUserReport();
+      final report = await ApiCommon.getUserReport(context);
       final data = (report != null && report is Map && report['data'] != null && report['data'] is Map)
           ? report['data'] as Map
           : <String, dynamic>{};
@@ -137,6 +138,17 @@ class _MyProfilePageState extends State<MyProfilePage> {
                       MaterialPageRoute(builder: (context) => HomePage()),
                     );
                   }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('Giới thiệu'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AboutPage()),
+                  );
                 },
               ),
               ListTile(
