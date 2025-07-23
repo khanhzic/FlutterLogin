@@ -388,6 +388,17 @@ class _HomePageState extends State<HomePage> with RouteAware {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.sunny),
+            title: const Text('Về chúng tôi'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AboutPage()),
+              );
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Đăng xuất'),
             onTap: () {
