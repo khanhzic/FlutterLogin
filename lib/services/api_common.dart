@@ -4,6 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import 'package:image_picker/image_picker.dart';
 import '../widgets/loading_overlay.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:flutter/material.dart';
+
+class TokenExpiredException implements Exception {
+  final String message;
+  TokenExpiredException([this.message = 'Token đã hết hạn']);
+  @override
+  String toString() => message;
+}
 
 class ApiCommon {
   static LoadingManager? _loadingManager;
@@ -60,6 +69,61 @@ class ApiCommon {
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+  }
+
+  // Kiểm tra token hết hạn (JWT)
+  static Future<bool> isTokenExpired() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return true;
+    try {
+      return JwtDecoder.isExpired(token);
+    } catch (e) {
+      // Nếu token không phải JWT hoặc lỗi giải mã, coi như hết hạn
+      return true;
+    }
+  }
+
+  /// Kiểm tra token hết hạn, nếu hết hạn thì xóa token, user và chuyển về màn hình login
+  static Future<void> checkAndHandleTokenExpired() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_tokenKey);
+    if (token == null || token.isEmpty || JwtDecoder.isExpired(token)) {
+      await prefs.remove(_tokenKey);
+      await prefs.remove('user');
+      throw TokenExpiredException();
+    }
+  }
+
+  /// Hàm generic kiểm tra token hết hạn trước khi gọi API
+  static Future<T> withTokenCheck<T>(BuildContext context, Future<T> Function() apiCall) async {
+    try {
+      await checkAndHandleTokenExpired();
+      return await apiCall();
+    } on TokenExpiredException {
+      if (T == Map<String, dynamic>) {
+        return <String, dynamic>{} as T;
+      }
+      throw Exception('Token expired');
+    }
+  }
+
+  /// Hàm generic kiểm tra token hết hạn và status 401 cho mọi API
+  static Future<T> safeApiCall<T>({
+    required BuildContext context,
+    required Future<http.Response> Function() apiRequest,
+    required T Function(http.Response) onSuccess,
+  }) async {
+    try {
+      await checkAndHandleTokenExpired();
+      final response = await apiRequest();
+      if (response.statusCode == 401) {
+        await clearToken();
+        throw TokenExpiredException();
+      }
+      return onSuccess(response);
+    } on TokenExpiredException {
+      rethrow;
+    }
   }
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
@@ -131,11 +195,12 @@ class ApiCommon {
     }
   }
 
-  static Future<Map<String, dynamic>> changePassword(String oldPassword, String newPassword, String confirmPassword) async {
-    return _loadingManager?.withLoading(
-      () async {
+  static Future<Map<String, dynamic>> changePassword(BuildContext context, String oldPassword, String newPassword, String confirmPassword) {
+    return safeApiCall(
+      context: context,
+      apiRequest: () async {
         final token = await getToken();
-        final url = '$baseUrl/users/change_password';
+        final url = '$baseUrl/users/change-password';
         final headers = {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -145,31 +210,24 @@ class ApiCommon {
           'new_password': newPassword,
           'new_password_confirmation': confirmPassword,
         };
-        
         _logRequest('POST', url, headers, body);
-        
-        try {
-          final response = await http.post(
-            Uri.parse(url),
-            headers: headers,
-            body: jsonEncode(body),
-          );
-          
-          _logResponse('POST', url, response.statusCode, response.headers, response.body);
-          
-          return jsonDecode(response.body);
-        } catch (e) {
-          _logError('POST', url, e);
-          rethrow;
-        }
+        return await http.post(
+          Uri.parse(url),
+          headers: headers,
+          body: jsonEncode(body),
+        );
       },
-      loadingText: 'Đang đổi mật khẩu...',
-    ) ?? _changePasswordWithoutLoading(oldPassword, newPassword, confirmPassword);
+      onSuccess: (response) => jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
   static Future<Map<String, dynamic>> _changePasswordWithoutLoading(String oldPassword, String newPassword, String confirmPassword) async {
+    if (await isTokenExpired()) {
+      await clearToken();
+      throw Exception('Token đã hết hạn. Vui lòng đăng nhập lại.');
+    }
     final token = await getToken();
-    final url = '$baseUrl/users/change_password';
+    final url = '$baseUrl/api/v1/users/change-password';
     final headers = {
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -198,9 +256,10 @@ class ApiCommon {
     }
   }
 
-  static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> data, {Map<String, String>? headers}) async {
-    return _loadingManager?.withLoading(
-      () async {
+  static Future<Map<String, dynamic>> post(BuildContext context, String endpoint, Map<String, dynamic> data, {Map<String, String>? headers}) {
+    return safeApiCall(
+      context: context,
+      apiRequest: () async {
         final token = await getToken();
         final url = '$baseUrl/$endpoint';
         final requestHeaders = {
@@ -208,29 +267,22 @@ class ApiCommon {
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
           ...?headers,
         };
-        
         _logRequest('POST', url, requestHeaders, data);
-        
-        try {
-          final response = await http.post(
-            Uri.parse(url),
-            headers: requestHeaders,
-            body: jsonEncode(data),
-          );
-          
-          _logResponse('POST', url, response.statusCode, response.headers, response.body);
-          
-          return jsonDecode(response.body);
-        } catch (e) {
-          _logError('POST', url, e);
-          rethrow;
-        }
+        return await http.post(
+          Uri.parse(url),
+          headers: requestHeaders,
+          body: jsonEncode(data),
+        );
       },
-      loadingText: 'Đang xử lý...',
-    ) ?? _postWithoutLoading(endpoint, data, headers: headers);
+      onSuccess: (response) => jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
   static Future<Map<String, dynamic>> _postWithoutLoading(String endpoint, Map<String, dynamic> data, {Map<String, String>? headers}) async {
+    if (await isTokenExpired()) {
+      await clearToken();
+      throw Exception('Token đã hết hạn. Vui lòng đăng nhập lại.');
+    }
     final token = await getToken();
     final url = '$baseUrl/$endpoint';
     final requestHeaders = {
@@ -257,9 +309,10 @@ class ApiCommon {
     }
   }
 
-  static Future<Map<String, dynamic>> multipartPost(String endpoint, Map<String, dynamic> data, XFile image, {Map<String, String>? headers}) async {
-    return _loadingManager?.withLoading(
-      () async {
+  static Future<Map<String, dynamic>> multipartPost(BuildContext context, String endpoint, Map<String, dynamic> data, XFile image, {Map<String, String>? headers}) {
+    return safeApiCall(
+      context: context,
+      apiRequest: () async {
         final token = await getToken();
         final url = '$baseUrl/$endpoint';
         
@@ -270,31 +323,26 @@ class ApiCommon {
         print('   Image: ${image.path}');
         print('   Timestamp: ${DateTime.now().toIso8601String()}');
         
-        try {
-          var request = http.MultipartRequest('POST', Uri.parse(url));
-          request.fields.addAll(data.map((k, v) => MapEntry(k, v.toString())));
-          request.files.add(await http.MultipartFile.fromPath('evident', image.path));
-          if (token != null && token.isNotEmpty) {
-            request.headers['Authorization'] = 'Bearer $token';
-          }
-          if (headers != null) request.headers.addAll(headers);
-          
-          var streamed = await request.send();
-          final response = await http.Response.fromStream(streamed);
-          
-          _logResponse('POST (Multipart)', url, response.statusCode, response.headers, response.body);
-          
-          return jsonDecode(response.body);
-        } catch (e) {
-          _logError('POST (Multipart)', url, e);
-          rethrow;
+        var request = http.MultipartRequest('POST', Uri.parse(url));
+        request.fields.addAll(data.map((k, v) => MapEntry(k, v.toString())));
+        request.files.add(await http.MultipartFile.fromPath('file_upload', image.path));
+        if (token != null && token.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $token';
         }
+        if (headers != null) request.headers.addAll(headers);
+        
+        var streamed = await request.send();
+        return await http.Response.fromStream(streamed);
       },
-      loadingText: 'Đang tải lên...',
-    ) ?? _multipartPostWithoutLoading(endpoint, data, image, headers: headers);
+      onSuccess: (response) => jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
   static Future<Map<String, dynamic>> _multipartPostWithoutLoading(String endpoint, Map<String, dynamic> data, XFile image, {Map<String, String>? headers}) async {
+    if (await isTokenExpired()) {
+      await clearToken();
+      throw Exception('Token đã hết hạn. Vui lòng đăng nhập lại.');
+    }
     final token = await getToken();
     final url = '$baseUrl/$endpoint';
     
@@ -308,7 +356,7 @@ class ApiCommon {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(url));
       request.fields.addAll(data.map((k, v) => MapEntry(k, v.toString())));
-      request.files.add(await http.MultipartFile.fromPath('evident', image.path));
+      request.files.add(await http.MultipartFile.fromPath('file_upload', image.path));
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $token';
       }
@@ -327,50 +375,41 @@ class ApiCommon {
   }
 
   static Future<Map<String, dynamic>> processAction({
+    required BuildContext context,
     required String endpoint,
     required Map<String, dynamic> data,
     XFile? image,
     Map<String, String>? headers,
   }) async {
     if (image != null) {
-      return await multipartPost(endpoint, data, image, headers: headers);
+      return await multipartPost(context, endpoint, data, image, headers: headers);
     } else {
-      return await post(endpoint, data, headers: headers);
+      return await post(context, endpoint, data, headers: headers);
     }
   }
 
-  static Future<Map<String, dynamic>?> getUserReport() async {
-    return _loadingManager?.withLoading(
-      () async {
+  static Future<Map<String, dynamic>?> getUserReport(BuildContext context) {
+    return safeApiCall(
+      context: context,
+      apiRequest: () async {
         final token = await getToken();
         final url = '$baseUrl/report/report-by-user';
         final headers = {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         };
-        
         _logRequest('GET', url, headers, null);
-        
-        try {
-          final response = await http.get(Uri.parse(url), headers: headers);
-          
-          _logResponse('GET', url, response.statusCode, response.headers, response.body);
-          
-          if (response.statusCode == 200) {
-            return jsonDecode(response.body);
-          } else {
-            return null;
-          }
-        } catch (e) {
-          _logError('GET', url, e);
-          rethrow;
-        }
+        return await http.get(Uri.parse(url), headers: headers);
       },
-      loadingText: 'Đang tải dữ liệu...',
-    ) ?? _getUserReportWithoutLoading();
+      onSuccess: (response) => response.statusCode == 200 ? jsonDecode(response.body) as Map<String, dynamic> : <String, dynamic>{},
+    );
   }
 
   static Future<Map<String, dynamic>?> _getUserReportWithoutLoading() async {
+    if (await isTokenExpired()) {
+      await clearToken();
+      throw Exception('Token đã hết hạn. Vui lòng đăng nhập lại.');
+    }
     final token = await getToken();
     final url = '$baseUrl/report/report-by-user';
     final headers = {
@@ -396,38 +435,28 @@ class ApiCommon {
     }
   }
 
-  static Future<Map<String, dynamic>?> getUserData() async {
-    return _loadingManager?.withLoading(
-      () async {
+  static Future<Map<String, dynamic>?> getUserData(BuildContext context) {
+    return safeApiCall(
+      context: context,
+      apiRequest: () async {
         final token = await getToken();
         final url = '$baseUrl/me';
         final headers = {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         };
-        
         _logRequest('GET', url, headers, null);
-        
-        try {
-          final response = await http.get(Uri.parse(url), headers: headers);
-          
-          _logResponse('GET', url, response.statusCode, response.headers, response.body);
-          
-          if (response.statusCode == 200) {
-            return jsonDecode(response.body);
-          } else {
-            return null;
-          }
-        } catch (e) {
-          _logError('GET', url, e);
-          rethrow;
-        }
+        return await http.get(Uri.parse(url), headers: headers);
       },
-      loadingText: 'Đang tải thông tin...',
-    ) ?? _getUserDataWithoutLoading();
+      onSuccess: (response) => response.statusCode == 200 ? jsonDecode(response.body) as Map<String, dynamic> : <String, dynamic>{},
+    );
   }
 
   static Future<Map<String, dynamic>?> _getUserDataWithoutLoading() async {
+    if (await isTokenExpired()) {
+      await clearToken();
+      throw Exception('Token đã hết hạn. Vui lòng đăng nhập lại.');
+    }
     final token = await getToken();
     final url = '$baseUrl/me';
     final headers = {
@@ -453,38 +482,28 @@ class ApiCommon {
     }
   }
 
-  static Future<Map<String, dynamic>?> getMasterData() async {
-    return _loadingManager?.withLoading(
-      () async {
+  static Future<Map<String, dynamic>?> getMasterData(BuildContext context) {
+    return safeApiCall(
+      context: context,
+      apiRequest: () async {
         final token = await getToken();
         final url = '$baseUrl/get-master-data';
         final headers = {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         };
-        
         _logRequest('GET', url, headers, null);
-        
-        try {
-          final response = await http.get(Uri.parse(url), headers: headers);
-          
-          _logResponse('GET', url, response.statusCode, response.headers, response.body);
-          
-          if (response.statusCode == 200) {
-            return jsonDecode(response.body);
-          } else {
-            return null;
-          }
-        } catch (e) {
-          _logError('GET', url, e);
-          rethrow;
-        }
+        return await http.get(Uri.parse(url), headers: headers);
       },
-      loadingText: 'Đang tải dữ liệu...',
-    ) ?? _getMasterDataWithoutLoading();
+      onSuccess: (response) => response.statusCode == 200 ? jsonDecode(response.body) as Map<String, dynamic> : <String, dynamic>{},
+    );
   }
 
   static Future<Map<String, dynamic>?> _getMasterDataWithoutLoading() async {
+    if (await isTokenExpired()) {
+      await clearToken();
+      throw Exception('Token đã hết hạn. Vui lòng đăng nhập lại.');
+    }
     final token = await getToken();
     final url = '$baseUrl/get-master-data';
     final headers = {

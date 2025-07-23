@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/app_config.dart';
 import '../services/api_common.dart';
+import 'package:login_app/pages/handle_detail_page.dart'; // Import HandleDetailPage
 
 class ProcessDetailPage extends StatefulWidget {
   final String processName;
@@ -82,9 +83,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   void _updateStartButtonState() {
     setState(() {
       final qrValid = _qrCodeController.text.isNotEmpty && _isValidQRCode(_qrCodeController.text);
-      final qtyText = _quantityController.text.trim();
-      final qtyValid = qtyText.isNotEmpty && int.tryParse(qtyText) != null && int.parse(qtyText) > 0;
-      _isStartButtonEnabled = qrValid && qtyValid;
+      _isStartButtonEnabled = qrValid;
     });
   }
 
@@ -165,7 +164,6 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     setState(() {
       _isScanning = true;
     });
-    
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -196,6 +194,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         ),
       ),
     );
+    _updateStartButtonState();
   }
 
   Future<void> _takePicture() async {
@@ -231,7 +230,12 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   Future<bool> _callApi(String endpoint, Map<String, dynamic> data, {XFile? image}) async {
     setState(() { _isLoading = true; });
     try {
-      final respData = await ApiCommon.processAction(endpoint: endpoint, data: data, image: image);
+      final respData = await ApiCommon.processAction(
+        context: context,
+        endpoint: endpoint,
+        data: data,
+        image: image,
+      );
       if (respData['status'] == "success" ) {
         return true;
       } else {
@@ -298,9 +302,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
 
   Future<void> _startProcess() async {
     FocusScope.of(context).unfocus(); // Hide keyboard
-    // Parse total_quantity from QR code
     int totalQuantity = 0;
-    int implementQuantity = 0;
     final qrText = _qrCodeController.text;
     final parts = qrText.split('_');
     if (parts.length == 2) {
@@ -308,32 +310,35 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         totalQuantity = int.parse(parts[1]);
       } catch (e) {}
     }
-
-    // Use initialImplementQuantity if provided, else use the input
+    setState(() { _isLoading = true; });
     try {
-      if (_initialImplementQuantity != null) {
-        implementQuantity = int.parse(_initialImplementQuantity!);
+      final respData = await ApiCommon.processAction(
+        context: context,
+        endpoint: 'start-working',
+        data: {
+          'order_code': parts[0],
+          'process_id': widget.processId,
+          'implement_quantity': 0,
+          'total_quantity': totalQuantity,
+        },
+      );
+      if (respData['status'] == 'success') {
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       } else {
-        implementQuantity = int.parse(_quantityController.text);
+        _showErrorAlert(respData);
       }
-    } catch (e) {}
-
-    final success = await _callApi('start-working', {
-      'order_code': parts[0],
-      'process_id': widget.processId,
-      'implement_quantity': implementQuantity,
-      'total_quantity': totalQuantity,
-    });
-    if (success) {
-      setState(() { _processState = ProcessState.started; });
+    } catch (e) {
+      _showErrorAlert({'message': 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'});
+    } finally {
+      setState(() { _isLoading = false; });
     }
   }
 
   Future<void> _endProcess() async {
     setState(() { _processingAction = 'end'; });
-    // Parse total_quantity and implement_quantity as in _startProcess
     int totalQuantity = 0;
-    int implementQuantity = 0;
     final qrText = _qrCodeController.text;
     final parts = qrText.split('_');
     if (parts.length == 2) {
@@ -341,13 +346,10 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         totalQuantity = int.parse(parts[1]);
       } catch (e) {}
     }
-    try {
-      implementQuantity = int.parse(_quantityController.text);
-    } catch (e) {}
     final success = await _callApi('end-working', {
       'order_code': parts[0],
       'process_id': widget.processId,
-      'implement_quantity': implementQuantity,
+      'implement_quantity': 0,
       'total_quantity': totalQuantity,
     });
     if (success) {
@@ -361,9 +363,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
 
   Future<void> _pendingProcess() async {
     setState(() { _processingAction = 'pending'; });
-    // Parse total_quantity and implement_quantity as in _startProcess
     int totalQuantity = 0;
-    int implementQuantity = 0;
     final qrText = _qrCodeController.text;
     final parts = qrText.split('_');
     if (parts.length == 2) {
@@ -371,15 +371,12 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         totalQuantity = int.parse(parts[1]);
       } catch (e) {}
     }
-    try {
-      implementQuantity = int.parse(_quantityController.text);
-    } catch (e) {}
     final result = await _showNoteAndImageDialog('Nhập chú thích và chọn ảnh cho trạng thái dừng');
     if (result != null && result['note'] != null && result['image'] != null) {
       final success = await _callApi('pending-working', {
         'order_code': parts[0],
         'process_id': widget.processId,
-        'implement_quantity': implementQuantity,
+        'implement_quantity': 0,
         'total_quantity': totalQuantity,
         'note': result['note'],
       }, image: result['image']);
@@ -513,15 +510,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
               ),
             ),
             const SizedBox(height: 20),
-            TextField(
-              controller: _quantityController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Số lượng sản phẩm thực hiện',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.numbers),
-              ),
-            ),
+            // Đã bỏ ô nhập số lượng sản phẩm thực hiện
             if (_successMessage != null)
               Padding(
                 padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
@@ -548,46 +537,16 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                     ? const CircularProgressIndicator()
                     : Text(widget.isContinue ? 'Tiếp tục' : 'Bắt đầu'),
               ),
-            if (_processState == ProcessState.started)
-              Column(
-                children: [
-                  const SizedBox(
-                    height: 64,
-                    width: 64,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 69, 175, 220)),
-                      strokeWidth: 10,
-                    ),
-                  ),
-                  const SizedBox(height: 64),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: (!_isLoading || _processingAction == 'pending') ? _endProcess : null,
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                          child: (_isLoading && _processingAction == 'end')
-                              ? const CircularProgressIndicator()
-                              : const Text('Hoàn thành'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: (!_isLoading || _processingAction == 'end') ? _pendingProcess : null,
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                          child: (_isLoading && _processingAction == 'pending')
-                              ? const CircularProgressIndicator()
-                              : const Text('Dừng'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            // Các nút khác đã được comment lại theo yêu cầu
+            // if (_processState == ProcessState.started)
+            //   ...
+            // if (_processState == ProcessState.done)
+            //   ...
+            // if (_processState == ProcessState.pending)
+            //   ...
+            // if (_processState == ProcessState.error)
+            //   ...
+            // Các nút Hoàn thành, Dừng, loading khi đã bắt đầu đều đã comment lại
           ],
         ),
       ),

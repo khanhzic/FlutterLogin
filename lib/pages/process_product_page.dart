@@ -30,7 +30,10 @@ class _ProcessProductPageState extends State<ProcessProductPage> {
     });
 
     try {
-      final masterData = await MasterDataService.getMasterData();
+      // Xóa cache để đảm bảo lấy dữ liệu mới nhất
+      await MasterDataService.clearCache();
+      
+      final masterData = await MasterDataService.getMasterData(context, forceRefresh: true);
       if (masterData != null) {
         final productProcesses = masterData.getProcessesByProductId(widget.product.id);
         setState(() {
