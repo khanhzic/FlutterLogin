@@ -512,13 +512,13 @@ class ApiCommon {
 
   static Future<Map<String, dynamic>> startTransport(List<String> productCodes) async {
     final token = await getToken();
-    final url = '$baseUrl/work/start_transport';
+    final url = '$baseUrl/delivery/start/';
     final headers = {
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
     final body = {
-      'items': productCodes,
+      'item_codes': productCodes,
     };
     _logRequest('POST', url, headers, body);
     try {
