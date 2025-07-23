@@ -528,4 +528,53 @@ class ApiCommon {
       rethrow;
     }
   }
+
+  static Future<Map<String, dynamic>> startTransport(List<String> productCodes) async {
+    final token = await getToken();
+    final url = '$baseUrl/delivery/start/';
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+    final body = {
+      'item_codes': productCodes,
+    };
+    _logRequest('POST', url, headers, body);
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+      _logResponse('POST', url, response.statusCode, response.headers, response.body);
+      return jsonDecode(response.body);
+    } catch (e) {
+      _logError('POST', url, e);
+      rethrow;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getListDeliveryItems() async {
+    final token = await getToken();
+    final url = '$baseUrl/delivery/list';
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+    _logRequest('GET', url, headers, null);
+    try {
+      final response = await http.get(Uri.parse(url), headers: headers);
+      _logResponse('GET', url, response.statusCode, response.headers, response.body);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['data'] is List) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+      return [];
+    } catch (e) {
+      _logError('GET', url, e);
+      rethrow;
+    }
+  }
 } 
