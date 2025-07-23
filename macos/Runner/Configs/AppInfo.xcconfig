@@ -8,7 +8,7 @@
 PRODUCT_NAME = login_app
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.loginApp
+PRODUCT_BUNDLE_IDENTIFIER = vn.com.winsun
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2025 vn.com.winsun All rights reserved.

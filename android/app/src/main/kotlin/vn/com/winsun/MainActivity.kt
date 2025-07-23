@@ -1,4 +1,4 @@
-package com.example.login_app
+package vn.com.winsun
 
 import io.flutter.embedding.android.FlutterActivity
 
