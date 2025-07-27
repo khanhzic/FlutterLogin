@@ -22,6 +22,11 @@ class _DeliveryPageState extends State<DeliveryPage> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   void dispose() {
     controller?.dispose();
     _searchController.dispose();
@@ -144,7 +149,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
       _resultMessage = null;
     });
     try {
-      final result = await ApiCommon.startTransport(scannedCodes);
+      final result = await ApiCommon.startTransport(context, scannedCodes);
       if (result['status'] == 'success') {
         setState(() {
           _resultMessage = 'Gửi vận chuyển thành công!';
@@ -228,7 +233,21 @@ class _DeliveryPageState extends State<DeliveryPage> {
               // No autofocus, so the list keeps focus
             ),
             const SizedBox(height: 16),
-            const Text('Danh sách mã đã quét:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                children: [
+                  const TextSpan(
+                    text: 'Danh sách mã đã quét: ',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  TextSpan(
+                    text: '${scannedCodes.length}',
+                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 10),
             Expanded(
               child: _filteredCodes.isEmpty

@@ -45,7 +45,11 @@ class _HomePageState extends State<HomePage> with RouteAware {
         _loadUserData();
       } on TokenExpiredException {
         if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (route) => false,
+          );
         }
         // Không gọi _loadUserData nữa!
       }

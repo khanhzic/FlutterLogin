@@ -22,6 +22,13 @@ class _DeliveryPageState extends State<DeliveryPage> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    print('🔍 DEBUG: TransporterPage initState called');
+    print('🔍 DEBUG: Initial scannedCodes length: ${scannedCodes.length}');
+  }
+
+  @override
   void dispose() {
     controller?.dispose();
     _searchController.dispose();
@@ -38,19 +45,29 @@ class _DeliveryPageState extends State<DeliveryPage> {
   }
 
   void _onQRViewCreated(QRViewController controller) {
+    print('🔍 DEBUG: _onQRViewCreated called');
     this.controller = controller;
     controller.scannedDataStream.listen((scanData) {
+      print('🔍 DEBUG: QR stream received: ${scanData.code}');
       if (scanData.code != null) {
         final qrData = scanData.code!;
+        print('🔍 DEBUG: QR Code scanned: $qrData');
         if (_isValidQRCode(qrData)) {
+          print('🔍 DEBUG: QR code is valid, adding to list');
           setState(() {
             if (!scannedCodes.contains(qrData)) {
               scannedCodes.add(qrData);
+              print('🔍 DEBUG: Added QR code to list. Total codes: ${scannedCodes.length}');
+              print('🔍 DEBUG: scannedCodes content: $scannedCodes');
+            } else {
+              print('🔍 DEBUG: QR code already exists in list');
             }
             _isScanning = false;
             _qrErrorMessage = null;
           });
+          print('🔍 DEBUG: setState completed');
         } else {
+          print('🔍 DEBUG: Invalid QR code: $qrData');
           setState(() {
             _qrErrorMessage = 'Mã sản phẩm không hợp lệ, hãy quét lại đúng mã!';
           });
@@ -76,7 +93,9 @@ class _DeliveryPageState extends State<DeliveryPage> {
   }
 
   void _scanQRCode() async {
+    print('🔍 DEBUG: _scanQRCode called');
     bool hasPermission = await _requestCameraPermission();
+    print('🔍 DEBUG: Camera permission: $hasPermission');
     if (!hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -89,6 +108,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
     setState(() {
       _isScanning = true;
     });
+    print('🔍 DEBUG: Opening QR scanner dialog');
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -98,6 +118,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
+                print('🔍 DEBUG: Back button pressed, closing scanner');
                 setState(() {
                   _isScanning = false;
                 });
@@ -119,44 +140,56 @@ class _DeliveryPageState extends State<DeliveryPage> {
         ),
       ),
     );
+    print('🔍 DEBUG: QR scanner dialog closed');
   }
 
   void _onSearchChanged() {
+    print('🔍 DEBUG: _onSearchChanged called with text: "${_searchController.text}"');
     setState(() {
       _searchText = _searchController.text.trim();
     });
+    print('🔍 DEBUG: _searchText updated to: "$_searchText"');
   }
 
   List<String> get _filteredCodes {
+    print('🔍 DEBUG: _filteredCodes getter called');
     if (_searchText.isEmpty) {
       final sorted = List<String>.from(scannedCodes);
       sorted.sort();
+      print('🔍 DEBUG: No search text, returning ${sorted.length} sorted codes');
       return sorted;
     }
     final filtered = scannedCodes.where((code) => code.toLowerCase().contains(_searchText.toLowerCase())).toList();
     filtered.sort();
+    print('🔍 DEBUG: With search text "$_searchText", returning ${filtered.length} filtered codes');
     return filtered;
   }
 
   Future<void> _startTransport() async {
+    print('🔍 DEBUG: _startTransport called with ${scannedCodes.length} codes');
+    print('🔍 DEBUG: Codes to send: $scannedCodes');
     setState(() {
       _isLoading = true;
       _resultMessage = null;
     });
     try {
-      final result = await ApiCommon.startTransport(scannedCodes);
+      final result = await ApiCommon.startTransport(context, scannedCodes);
+      print('🔍 DEBUG: API result: $result');
       if (result['status'] == 'success') {
         setState(() {
           _resultMessage = 'Gửi vận chuyển thành công!';
+          print('🔍 DEBUG: Clearing scannedCodes after success');
           scannedCodes.clear();
           _searchController.clear();
         });
+        print('🔍 DEBUG: scannedCodes cleared, new length: ${scannedCodes.length}');
       } else {
         setState(() {
           _resultMessage = result['message'] ?? 'Có lỗi xảy ra khi gửi vận chuyển.';
         });
       }
     } catch (e) {
+      print('🔍 DEBUG: Error in _startTransport: $e');
       setState(() {
         _resultMessage = 'Có lỗi xảy ra khi gửi vận chuyển.';
       });
@@ -169,6 +202,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
 
   @override
   Widget build(BuildContext context) {
+    print('🔍 DEBUG: Building transporter page. scannedCodes length: ${scannedCodes.length}, _filteredCodes length: ${_filteredCodes.length}');
+    print('🔍 DEBUG: scannedCodes content: $scannedCodes');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vận chuyển'),
@@ -179,6 +214,20 @@ class _DeliveryPageState extends State<DeliveryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Debug info hiển thị trực tiếp trên UI
+            Container(
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: Colors.yellow.shade100,
+                border: Border.all(color: Colors.orange),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'DEBUG: scannedCodes.length = ${scannedCodes.length}, content = $scannedCodes',
+                style: const TextStyle(fontSize: 12, color: Colors.orange),
+              ),
+            ),
             Row(
               children: [
                 Expanded(
@@ -228,7 +277,21 @@ class _DeliveryPageState extends State<DeliveryPage> {
               // No autofocus, so the list keeps focus
             ),
             const SizedBox(height: 16),
-            const Text('Danh sách mã đã quét:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                children: [
+                  const TextSpan(
+                    text: 'Danh sách mã đã quét: ',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  TextSpan(
+                    text: '${scannedCodes.length}',
+                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 10),
             Expanded(
               child: _filteredCodes.isEmpty
