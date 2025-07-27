@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../widgets/loading_overlay.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:flutter/material.dart';
+import '../main.dart';
 
 class TokenExpiredException implements Exception {
   final String message;
@@ -118,10 +119,26 @@ class ApiCommon {
       final response = await apiRequest();
       if (response.statusCode == 401) {
         await clearToken();
+        // Tự động redirect về login khi token hết hạn
+        if (context.mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (route) => false,
+          );
+        }
         throw TokenExpiredException();
       }
       return onSuccess(response);
     } on TokenExpiredException {
+      // Tự động redirect về login khi token hết hạn
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+      }
       rethrow;
     }
   }
@@ -334,7 +351,11 @@ class ApiCommon {
         var streamed = await request.send();
         return await http.Response.fromStream(streamed);
       },
-      onSuccess: (response) => jsonDecode(response.body) as Map<String, dynamic>,
+      onSuccess: (response) {
+        print('🔍 DEBUG: Response status code: ${response.statusCode}');
+        print('🔍 DEBUG: Response body: ${response.body}');
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      },
     );
   }
 
@@ -529,9 +550,12 @@ class ApiCommon {
     }
   }
 
-  static Future<Map<String, dynamic>> startTransport(List<String> productCodes) async {
+  static Future<Map<String, dynamic>> startTransport(BuildContext context, List<String> productCodes) {
+    return safeApiCall(
+      context: context,
+      apiRequest: () async {
     final token = await getToken();
-    final url = '$baseUrl/delivery/start/';
+        final url = '$baseUrl/delivery/start';
     final headers = {
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -540,41 +564,48 @@ class ApiCommon {
       'item_codes': productCodes,
     };
     _logRequest('POST', url, headers, body);
-    try {
-      final response = await http.post(
+        return await http.post(
         Uri.parse(url),
         headers: headers,
         body: jsonEncode(body),
       );
-      _logResponse('POST', url, response.statusCode, response.headers, response.body);
-      return jsonDecode(response.body);
-    } catch (e) {
-      _logError('POST', url, e);
-      rethrow;
-    }
+      },
+      onSuccess: (response) => jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
-  static Future<List<Map<String, dynamic>>> getListDeliveryItems() async {
+  static Future<List<Map<String, dynamic>>> getListDeliveryItems(BuildContext context) {
+    return safeApiCall(
+      context: context,
+      apiRequest: () async {
     final token = await getToken();
     final url = '$baseUrl/delivery/list';
     final headers = {
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
-    _logRequest('GET', url, headers, null);
-    try {
-      final response = await http.get(Uri.parse(url), headers: headers);
-      _logResponse('GET', url, response.statusCode, response.headers, response.body);
+        _logRequest('POST', url, headers, null);
+        return await http.post(Uri.parse(url), headers: headers);
+      },
+      onSuccess: (response) {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+          print('🔍 DEBUG: API Response data: $data');
+          print('🔍 DEBUG: data["status"]: ${data['status']}');
+          print('🔍 DEBUG: data["data"] is List: ${data['data'] is List}');
+          print('🔍 DEBUG: data["data"] length: ${data['data'] is List ? (data['data'] as List).length : 'not a list'}');
+          
         if (data['status'] == 'success' && data['data'] is List) {
-          return List<Map<String, dynamic>>.from(data['data']);
+            // Trả về dữ liệu gốc mà không thay đổi cấu trúc
+            final processedData = List<Map<String, dynamic>>.from(data['data']);
+            print('🔍 DEBUG: Final processed data length: ${processedData.length}');
+            print('🔍 DEBUG: First item structure: ${processedData.isNotEmpty ? processedData.first : 'empty'}');
+            return processedData;
+          }
         }
-      }
-      return [];
-    } catch (e) {
-      _logError('GET', url, e);
-      rethrow;
-    }
+        print('🔍 DEBUG: Returning empty list');
+        return <Map<String, dynamic>>[];
+      },
+    );
   }
 } 

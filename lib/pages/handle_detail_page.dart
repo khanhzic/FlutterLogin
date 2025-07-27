@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_common.dart';
+import '../main.dart';
 
 class HandleDetailPage extends StatefulWidget {
   final String? code;
@@ -109,7 +110,11 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
       }
     } on TokenExpiredException {
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
       }
     } catch (e) {
       _showErrorAlert({'message': 'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin'});
@@ -139,7 +144,11 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
       }
     } on TokenExpiredException {
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
       }
     } catch (e) {
       _showErrorAlert({'message': 'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin'});
