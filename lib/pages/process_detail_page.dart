@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/app_config.dart';
 import '../services/api_common.dart';
+import '../services/products_service.dart';
 import 'package:login_app/pages/handle_detail_page.dart'; // Import HandleDetailPage
 
 class ProcessDetailPage extends StatefulWidget {
@@ -82,7 +83,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
 
   void _updateStartButtonState() {
     setState(() {
-      final qrValid = _qrCodeController.text.isNotEmpty && _isValidQRCode(_qrCodeController.text);
+      final qrValid = _qrCodeController.text.isNotEmpty;
       _isStartButtonEnabled = qrValid;
     });
   }
@@ -92,7 +93,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     if (status.isGranted) {
       return true;
     }
-    
+
     status = await Permission.camera.request();
     return status.isGranted;
   }
@@ -103,18 +104,30 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
       if (scanData.code != null) {
         final qrData = scanData.code!;
         // Validate QR code format
-        if (_isValidQRCode(qrData)) {
+        //if (ProductsService.isValidQRCode(qrData)) {
           setState(() {
-            _qrCodeController.text = qrData;
-            _isScanning = false;
-            _qrErrorMessage = null;
+            // _qrCodeController.text = qrData;
+            try {
+              final parseData = ProductsService.parseQRCode(qrData);
+              int quantity = parseData["quantity"] ?? 0;
+              String orderCode = parseData["orderCode"];
+
+              _qrCodeController.text = '${orderCode}_$quantity';
+
+              _isScanning = false;
+              _qrErrorMessage = null;
+            } catch (e) {
+              //setState(() {
+                _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
+              //});
+            }
           });
-        } else {
-          setState(() {
-            _qrErrorMessage = 'Mã sản phẩm không hợp lệ, hãy quét lại đúng mã!';
-            // Do NOT update _qrCodeController.text if invalid
-          });
-        }
+        // } else {
+        //   setState(() {
+        //     _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
+        //     // Do NOT update _qrCodeController.text if invalid
+        //   });
+        // }
         // Always close scan screen after any scan
         controller.pauseCamera();
         Navigator.pop(context);
@@ -122,39 +135,39 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     });
   }
 
-  bool _isValidQRCode(String qrData) {
-    // Check if QR code matches format: <string>_<total_quantity>
-    // Example: "ABC123_50" or "ORDER001_100"
-    
-    // Check if it contains exactly one underscore
-    final parts = qrData.split('_');
-    if (parts.length != 2) {
-      return false;
-    }
-    
-    final orderCode = parts[0];
-    final quantityStr = parts[1];
-    
-    // Check if order code is not empty
-    if (orderCode.isEmpty) {
-      return false;
-    }
-    
-    // Check if quantity is a valid number
-    try {
-      final quantity = int.parse(quantityStr);
-      return quantity > 0; // Quantity must be positive
-    } catch (e) {
-      return false; // Quantity is not a valid number
-    }
-  }
+  // bool _isValidQRCode(String qrData) {
+  //   // Check if QR code matches format: <string>_<total_quantity>
+  //   // Example: "ABC123_50" or "ORDER001_100"
+
+  //   // Check if it contains exactly one underscore
+  //   final parts = qrData.split('_');
+  //   if (parts.length != 2) {
+  //     return false;
+  //   }
+
+  //   final orderCode = parts[0];
+  //   final quantityStr = parts[1];
+
+  //   // Check if order code is not empty
+  //   if (orderCode.isEmpty) {
+  //     return false;
+  //   }
+
+  //   // Check if quantity is a valid number
+  //   try {
+  //     final quantity = int.parse(quantityStr);
+  //     return quantity > 0; // Quantity must be positive
+  //   } catch (e) {
+  //     return false; // Quantity is not a valid number
+  //   }
+  // }
 
   void _scanQRCode() async {
     bool hasPermission = await _requestCameraPermission();
     if (!hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cần quyền truy cập camera để quét mã QR'),
+          content: Text(MESSAGE_ERROR_CAMERA_PERMISSION),
           duration: Duration(seconds: 2),
         ),
       );
@@ -227,8 +240,11 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     }
   }
 
-  Future<bool> _callApi(String endpoint, Map<String, dynamic> data, {XFile? image}) async {
-    setState(() { _isLoading = true; });
+  Future<bool> _callApi(String endpoint, Map<String, dynamic> data,
+      {XFile? image}) async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
       final respData = await ApiCommon.processAction(
         context: context,
@@ -236,29 +252,35 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         data: data,
         image: image,
       );
-      if (respData['status'] == "success" ) {
+      if (respData['status'] == "success") {
         return true;
       } else {
         _showErrorAlert(respData);
         return false;
       }
     } catch (e) {
-      _showErrorAlert({'message': 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'});
+      _showErrorAlert({
+        'message':
+            'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'
+      });
       return false;
     } finally {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   void _showErrorAlert(Map<String, dynamic>? responseData) {
-    String errorMessage = 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên';
-    
+    String errorMessage =
+        'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên';
+
     if (responseData != null) {
       // Check if there are validation errors
       if (responseData['errors'] != null && responseData['errors'] is Map) {
         final errors = responseData['errors'] as Map<String, dynamic>;
         final errorMessages = <String>[];
-        
+
         // Collect all error messages
         errors.forEach((field, messages) {
           if (messages is List) {
@@ -269,7 +291,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
             errorMessages.add('$field: $messages');
           }
         });
-        
+
         if (errorMessages.isNotEmpty) {
           errorMessage = errorMessages.join('\n');
         }
@@ -310,7 +332,9 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         totalQuantity = int.parse(parts[1]);
       } catch (e) {}
     }
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
     try {
       final respData = await ApiCommon.processAction(
         context: context,
@@ -330,14 +354,21 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         _showErrorAlert(respData);
       }
     } catch (e) {
-      _showErrorAlert({'message': 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'});
+      _showErrorAlert({
+        'message':
+            'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'
+      });
     } finally {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   Future<void> _endProcess() async {
-    setState(() { _processingAction = 'end'; });
+    setState(() {
+      _processingAction = 'end';
+    });
     int totalQuantity = 0;
     final qrText = _qrCodeController.text;
     final parts = qrText.split('_');
@@ -358,11 +389,15 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         _successMessage = 'Đã cập nhật thành công!';
       });
     }
-    setState(() { _processingAction = null; });
+    setState(() {
+      _processingAction = null;
+    });
   }
 
   Future<void> _pendingProcess() async {
-    setState(() { _processingAction = 'pending'; });
+    setState(() {
+      _processingAction = 'pending';
+    });
     int totalQuantity = 0;
     final qrText = _qrCodeController.text;
     final parts = qrText.split('_');
@@ -371,15 +406,19 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         totalQuantity = int.parse(parts[1]);
       } catch (e) {}
     }
-    final result = await _showNoteAndImageDialog('Nhập chú thích và chọn ảnh cho trạng thái dừng');
+    final result = await _showNoteAndImageDialog(
+        'Nhập chú thích và chọn ảnh cho trạng thái dừng');
     if (result != null && result['note'] != null && result['image'] != null) {
-      final success = await _callApi('pending-working', {
-        'order_code': parts[0],
-        'process_id': widget.processId,
-        'implement_quantity': 0,
-        'total_quantity': totalQuantity,
-        'note': result['note'],
-      }, image: result['image']);
+      final success = await _callApi(
+          'pending-working',
+          {
+            'order_code': parts[0],
+            'process_id': widget.processId,
+            'implement_quantity': 0,
+            'total_quantity': totalQuantity,
+            'note': result['note'],
+          },
+          image: result['image']);
       if (success && mounted) {
         setState(() {
           _successMessage = 'Đã cập nhật thành công!';
@@ -387,17 +426,23 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         Navigator.of(context).pop();
       }
     }
-    setState(() { _processingAction = null; });
+    setState(() {
+      _processingAction = null;
+    });
   }
 
   Future<void> _stopProcess() async {
-    final result = await _showNoteAndImageDialog('Nhập chú thích và chọn ảnh cho trạng thái báo lỗi');
+    final result = await _showNoteAndImageDialog(
+        'Nhập chú thích và chọn ảnh cho trạng thái báo lỗi');
     if (result != null && result['note'] != null && result['image'] != null) {
-      await _callApi('work/stop', {
-        'order_code': _qrCodeController.text,
-        'process_id': widget.processId,
-        'note': result['note'],
-      }, image: result['image']);
+      await _callApi(
+          'work/stop',
+          {
+            'order_code': _qrCodeController.text,
+            'process_id': widget.processId,
+            'note': result['note'],
+          },
+          image: result['image']);
       if (mounted) Navigator.of(context).pop();
     }
   }
@@ -405,7 +450,8 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   Future<Map<String, dynamic>?> _showNoteAndImageDialog(String title) async {
     final TextEditingController noteController = TextEditingController();
     XFile? pickedImage;
-    bool canConfirm() => noteController.text.trim().isNotEmpty && pickedImage != null;
+    bool canConfirm() =>
+        noteController.text.trim().isNotEmpty && pickedImage != null;
     return showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
@@ -430,7 +476,8 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                         icon: const Icon(Icons.photo_camera),
                         label: const Text('Máy ảnh'),
                         onPressed: () async {
-                          final img = await ImagePicker().pickImage(source: ImageSource.camera);
+                          final img = await ImagePicker()
+                              .pickImage(source: ImageSource.camera);
                           if (img != null) setState(() => pickedImage = img);
                         },
                       ),
@@ -438,7 +485,8 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                         icon: const Icon(Icons.photo_library),
                         label: const Text('Thư viện'),
                         onPressed: () async {
-                          final img = await ImagePicker().pickImage(source: ImageSource.gallery);
+                          final img = await ImagePicker()
+                              .pickImage(source: ImageSource.gallery);
                           if (img != null) setState(() => pickedImage = img);
                         },
                       ),
@@ -447,7 +495,8 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                   if (pickedImage != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: Text('Đã chọn ảnh: ${pickedImage!.name}', style: const TextStyle(fontSize: 13)),
+                      child: Text('Đã chọn ảnh: ${pickedImage!.name}',
+                          style: const TextStyle(fontSize: 13)),
                     ),
                 ],
               ),
@@ -458,7 +507,8 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                 ),
                 ElevatedButton(
                   onPressed: canConfirm()
-                      ? () => Navigator.of(context).pop({'note': noteController.text, 'image': pickedImage})
+                      ? () => Navigator.of(context).pop(
+                          {'note': noteController.text, 'image': pickedImage})
                       : null,
                   child: const Text('Xác nhận'),
                 ),
@@ -495,7 +545,8 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                 padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
                 child: Text(
                   _qrErrorMessage!,
-                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -527,11 +578,13 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
             const SizedBox(height: 30),
             if (_processState == ProcessState.idle)
               ElevatedButton(
-                onPressed: _isStartButtonEnabled && !_isLoading ? _startProcess : null,
+                onPressed:
+                    _isStartButtonEnabled && !_isLoading ? _startProcess : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   textStyle: const TextStyle(fontSize: 18),
-                  backgroundColor: _isStartButtonEnabled ? Colors.blue : Colors.grey,
+                  backgroundColor:
+                      _isStartButtonEnabled ? Colors.blue : Colors.grey,
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator()
@@ -552,4 +605,4 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
       ),
     );
   }
-} 
+}

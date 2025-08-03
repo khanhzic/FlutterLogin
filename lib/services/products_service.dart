@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import '../models/product.dart';
 
 class ProductsService {
-  final String baseUrl = 'https://crudcrud.com/api/021545b9c8f548829477e22dd8cb1409';
+  final String baseUrl =
+      'https://crudcrud.com/api/021545b9c8f548829477e22dd8cb1409';
   final String resource = 'products';
 
   Future<List<Product>> getAllProducts() async {
@@ -67,4 +68,66 @@ class ProductsService {
       throw Exception('Failed to delete product: $e');
     }
   }
-} 
+
+  static bool isValidQRCode(String qrData) {
+    // Check if QR code matches format: <string>_<total_quantity>
+    // Example: "ABC123_50" or "ORDER001_100"
+
+    final lines = qrData.trim().split('\n').map((e) => e.trim()).toList();
+
+    if (lines.length < 2) {
+      return  false;
+    }
+
+    final orderCode = lines[0];
+    final quantityLine = lines[1];
+
+    if (orderCode.isEmpty) {
+      return  false;
+    }
+
+    // Tìm số nguyên đầu tiên trong dòng 2
+    final quantityMatch = RegExp(r'\d+').firstMatch(quantityLine);
+    if (quantityMatch == null) {
+      return false;
+    }
+
+    final quantity = int.parse(quantityMatch.group(0)!);
+    if (quantity <= 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  static Map<String, dynamic> parseQRCode(String qrData) {
+    final lines = qrData.trim().split('\n').map((e) => e.trim()).toList();
+
+    if (lines.length < 2) {
+      throw FormatException('QR code must contain at least 2 lines.');
+    }
+
+    final orderCode = lines[0];
+    final quantityLine = lines[1];
+
+    if (orderCode.isEmpty) {
+      throw FormatException('Order code cannot be empty.');
+    }
+
+    // Tìm số nguyên đầu tiên trong dòng 2
+    final quantityMatch = RegExp(r'\d+').firstMatch(quantityLine);
+    if (quantityMatch == null) {
+      throw FormatException('Could not find quantity in line 2.');
+    }
+
+    final quantity = int.parse(quantityMatch.group(0)!);
+    if (quantity <= 0) {
+      throw FormatException('Quantity must be a positive number.');
+    }
+
+    return {
+      'orderCode': orderCode,
+      'quantity': quantity,
+    };
+  }
+}

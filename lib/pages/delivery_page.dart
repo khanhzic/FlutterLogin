@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/api_common.dart';
+import '../services/products_service.dart';
+import '../config/app_config.dart';
 
 class DeliveryPage extends StatefulWidget {
   const DeliveryPage({super.key});
@@ -46,38 +48,34 @@ class _DeliveryPageState extends State<DeliveryPage> {
     this.controller = controller;
     controller.scannedDataStream.listen((scanData) {
       if (scanData.code != null) {
-        final qrData = scanData.code!;
-        if (_isValidQRCode(qrData)) {
+        try {
+          final qrData = scanData.code!;
+
+          final parseData = ProductsService.parseQRCode(qrData);
+          //int quantity = parseData["quantity"] ?? 0;
+          // String orderCode = parseData["orderCode"];
+
           setState(() {
-            if (!scannedCodes.contains(qrData)) {
-              scannedCodes.add(qrData);
-            }
+            // scannedCodes.add(qrData);
+            scannedCodes.add('${parseData['orderCode']}_${parseData['quantity']}');
+            
+            // save this data to delivery list
+            ApiCommon.addItemToDeliveryList(parseData);
+
             _isScanning = false;
             _qrErrorMessage = null;
           });
-        } else {
+        } catch (e) {
           setState(() {
-            _qrErrorMessage = 'Mã sản phẩm không hợp lệ, hãy quét lại đúng mã!';
+            _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
           });
+          return;
         }
+
         controller.pauseCamera();
         Navigator.pop(context);
       }
     });
-  }
-
-  bool _isValidQRCode(String qrData) {
-    final parts = qrData.split('_');
-    if (parts.length != 2) return false;
-    final orderCode = parts[0];
-    final quantityStr = parts[1];
-    if (orderCode.isEmpty) return false;
-    try {
-      final quantity = int.parse(quantityStr);
-      return quantity > 0;
-    } catch (e) {
-      return false;
-    }
   }
 
   void _scanQRCode() async {
@@ -85,7 +83,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
     if (!hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cần quyền truy cập camera để quét mã QR'),
+          content: Text(MESSAGE_ERROR_CAMERA_PERMISSION),
           duration: Duration(seconds: 2),
         ),
       );
@@ -138,7 +136,9 @@ class _DeliveryPageState extends State<DeliveryPage> {
       sorted.sort();
       return sorted;
     }
-    final filtered = scannedCodes.where((code) => code.toLowerCase().contains(_searchText.toLowerCase())).toList();
+    final filtered = scannedCodes
+        .where((code) => code.toLowerCase().contains(_searchText.toLowerCase()))
+        .toList();
     filtered.sort();
     return filtered;
   }
@@ -158,7 +158,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
         });
       } else {
         setState(() {
-          _resultMessage = result['message'] ?? 'Có lỗi xảy ra khi gửi vận chuyển.';
+          _resultMessage =
+              result['message'] ?? 'Có lỗi xảy ra khi gửi vận chuyển.';
         });
       }
     } catch (e) {
@@ -189,10 +190,12 @@ class _DeliveryPageState extends State<DeliveryPage> {
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.qr_code_scanner),
-                    label: const Text('Quét mã', style: TextStyle(fontSize: 16)),
+                    label:
+                        const Text('Quét mã', style: TextStyle(fontSize: 16)),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: _scanQRCode,
                   ),
@@ -204,15 +207,19 @@ class _DeliveryPageState extends State<DeliveryPage> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
                           )
                         : const Text('Bắt đầu', style: TextStyle(fontSize: 16)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: scannedCodes.isNotEmpty && !_isLoading ? _startTransport : null,
+                    onPressed: scannedCodes.isNotEmpty && !_isLoading
+                        ? _startTransport
+                        : null,
                   ),
                 ),
               ],
@@ -235,7 +242,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
             const SizedBox(height: 16),
             RichText(
               text: TextSpan(
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 children: [
                   const TextSpan(
                     text: 'Danh sách mã đã quét: ',
@@ -243,7 +251,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
                   ),
                   TextSpan(
                     text: '${scannedCodes.length}',
-                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.blue, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -261,7 +270,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
                             leading: const Icon(Icons.qr_code),
                             title: Text(
                               _filteredCodes[index],
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           );
                         },
@@ -273,7 +283,9 @@ class _DeliveryPageState extends State<DeliveryPage> {
               Text(
                 _resultMessage!,
                 style: TextStyle(
-                  color: _resultMessage == 'Gửi vận chuyển thành công!' ? Colors.green : Colors.red,
+                  color: _resultMessage == 'Gửi vận chuyển thành công!'
+                      ? Colors.green
+                      : Colors.red,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -285,4 +297,4 @@ class _DeliveryPageState extends State<DeliveryPage> {
       ),
     );
   }
-} 
+}

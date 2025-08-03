@@ -8,6 +8,8 @@ import 'dart:typed_data';
 import '../services/api_common.dart';
 import '../services/api_common.dart' show TokenExpiredException;
 import '../main.dart';
+import '../config/app_config.dart';
+import '../services/products_service.dart';
 
 class CompleteDeliveryPage extends StatefulWidget {
   const CompleteDeliveryPage({super.key});
@@ -36,7 +38,9 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
   }
 
   Future<void> _fetchDeliveryItems() async {
-    setState(() { _loading = true; });
+    setState(() {
+      _loading = true;
+    });
     try {
       final items = await ApiCommon.getListDeliveryItems(context);
       setState(() {
@@ -45,18 +49,26 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
     } catch (e) {
       // handle error, optionally show a message
     } finally {
-      setState(() { _loading = false; });
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
   List<Map<String, dynamic>> get _filteredItems {
     if (_searchText.isEmpty) {
       final sorted = List<Map<String, dynamic>>.from(deliveryItems);
-      sorted.sort((a, b) => ((a['order']?['code'] ?? '') as String).compareTo((b['order']?['code'] ?? '') as String));
+      sorted.sort((a, b) => ((a['order']?['code'] ?? '') as String)
+          .compareTo((b['order']?['code'] ?? '') as String));
       return sorted;
     }
-    final filtered = deliveryItems.where((item) => ((item['order']?['code'] ?? '') as String).toLowerCase().contains(_searchText.toLowerCase())).toList();
-    filtered.sort((a, b) => ((a['order']?['code'] ?? '') as String).compareTo((b['order']?['code'] ?? '') as String));
+    final filtered = deliveryItems
+        .where((item) => ((item['order']?['code'] ?? '') as String)
+            .toLowerCase()
+            .contains(_searchText.toLowerCase()))
+        .toList();
+    filtered.sort((a, b) => ((a['order']?['code'] ?? '') as String)
+        .compareTo((b['order']?['code'] ?? '') as String));
     return filtered;
   }
 
@@ -85,24 +97,37 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
 
   void _onQRViewCreated(QRViewController controller) {
     this.controller = controller;
-    controller.scannedDataStream.listen((scanData) {
+    controller.scannedDataStream.listen((scanData) async {
       if (scanData.code != null) {
-        final qrData = scanData.code!;
-        final exists = _filteredItems.any((item) => '${item['order']?['code'] ?? ''}_${item['order']?['total_quantity'] ?? ''}' == qrData);
-        if (exists) {
+        // final exists = _filteredItems.any((item) => '${item['order']?['code'] ?? ''}_${item['order']?['total_quantity'] ?? ''}' == qrData);
+        try {
+          final qrData = scanData.code!;
+
+          final parseData = ProductsService.parseQRCode(qrData);
+          //int quantity = parseData["quantity"] ?? 0;
+          // String orderCode = parseData["orderCode"];
+          final exists = ApiCommon.existedItemOnDeliveryList(parseData['orderCode']);
+          if (await exists) {
+            setState(() {
+              _selectedCode = '${parseData['orderCode']}_${parseData['quantity']}';
+              _qrErrorMessage = null;
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showFinishTransportDialog('${parseData['orderCode']}_${parseData['quantity']}');
+            });
+          } else {
+            setState(() {
+              _selectedCode = null;
+              _qrErrorMessage = 'Mã sản phẩm không tồn tại';
+            });
+          }
+        } catch (e) {
           setState(() {
-            _selectedCode = qrData;
-            _qrErrorMessage = null;
+            _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
           });
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showFinishTransportDialog(qrData);
-          });
-        } else {
-          setState(() {
-            _selectedCode = null;
-            _qrErrorMessage = 'Mã sản phẩm không tồn tại';
-          });
+          return;
         }
+
         controller.pauseCamera();
         Navigator.pop(context);
       }
@@ -115,12 +140,13 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
       _pickedImage = null;
       _noteController.clear(); // Xóa cả note cũ
     });
-    
+
     showDialog(
       context: context,
       barrierDismissible: false, // Không cho phép đóng bằng cách tap bên ngoài
       builder: (context) {
-        return StatefulBuilder( // Sử dụng StatefulBuilder để có thể update UI trong dialog
+        return StatefulBuilder(
+          // Sử dụng StatefulBuilder để có thể update UI trong dialog
           builder: (context, setDialogState) {
             return Dialog(
               child: Container(
@@ -134,8 +160,9 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Hoàn thành cho mã: $code', 
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      'Hoàn thành cho mã: $code',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                     const SizedBox(height: 20),
                     Flexible(
@@ -160,13 +187,17 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                               children: [
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    icon: const Icon(Icons.photo_camera, size: 24),
+                                    icon: const Icon(Icons.photo_camera,
+                                        size: 24),
                                     label: const Text(
                                       'Chụp ảnh',
-                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
                                       backgroundColor: Colors.blue,
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
@@ -174,7 +205,8 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                                       ),
                                     ),
                                     onPressed: () async {
-                                      final image = await _captureImageInDialog();
+                                      final image =
+                                          await _captureImageInDialog();
                                       if (image != null) {
                                         setDialogState(() {
                                           _pickedImage = image;
@@ -189,10 +221,13 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                                     icon: const Icon(Icons.image, size: 24),
                                     label: const Text(
                                       'Tải ảnh lên',
-                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
                                       backgroundColor: Colors.green,
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
@@ -216,63 +251,79 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: _pickedImage == null ? Colors.red.shade50 : Colors.green.shade50,
+                                color: _pickedImage == null
+                                    ? Colors.red.shade50
+                                    : Colors.green.shade50,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: _pickedImage == null ? Colors.red.shade200 : Colors.green.shade200,
+                                  color: _pickedImage == null
+                                      ? Colors.red.shade200
+                                      : Colors.green.shade200,
                                   width: 2,
                                 ),
                               ),
-                              child: _pickedImage == null 
-                                ? Row(
-                                    children: [
-                                      const Icon(Icons.warning, color: Colors.red, size: 20),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          '⚠️ Vui lòng chụp hoặc tải ảnh (bắt buộc)',
-                                          style: const TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                                          const SizedBox(width: 8),
-                                          const Text(
-                                            '✅ Đã chụp ảnh thành công',
-                                            style: TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: SizedBox(
-                                          height: 120,
-                                          width: double.infinity,
-                                          child: Image.file(
-                                            File(_pickedImage!.path),
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Container(
-                                                height: 120,
-                                                color: Colors.grey.shade300,
-                                                child: const Center(
-                                                  child: Text('Lỗi tải ảnh', style: TextStyle(color: Colors.red)),
-                                                ),
-                                              );
-                                            },
+                              child: _pickedImage == null
+                                  ? Row(
+                                      children: [
+                                        const Icon(Icons.warning,
+                                            color: Colors.red, size: 20),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '⚠️ Vui lòng chụp hoặc tải ảnh (bắt buộc)',
+                                            style: const TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold),
                                           ),
                                         ),
-                                      ),
-
-                                    ],
-                                  ),
+                                      ],
+                                    )
+                                  : Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.check_circle,
+                                                color: Colors.green, size: 20),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              '✅ Đã chụp ảnh thành công',
+                                              style: TextStyle(
+                                                  color: Colors.green,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          child: SizedBox(
+                                            height: 120,
+                                            width: double.infinity,
+                                            child: Image.file(
+                                              File(_pickedImage!.path),
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                return Container(
+                                                  height: 120,
+                                                  color: Colors.grey.shade300,
+                                                  child: const Center(
+                                                    child: Text('Lỗi tải ảnh',
+                                                        style: TextStyle(
+                                                            color: Colors.red)),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ],
                         ),
@@ -288,26 +339,34 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                           },
                           child: const Text(
                             'Hủy',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
                         const SizedBox(width: 12),
                         ElevatedButton(
-                          onPressed: _pickedImage != null ? () {
-                            Navigator.of(context).pop(); // Đóng dialog trước
-                            _completeDelivery(code);
-                          } : null, // Disable nếu chưa có ảnh
+                          onPressed: _pickedImage != null
+                              ? () {
+                                  Navigator.of(context)
+                                      .pop(); // Đóng dialog trước
+                                  _completeDelivery(code);
+                                }
+                              : null, // Disable nếu chưa có ảnh
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _pickedImage != null ? Colors.green : Colors.grey,
+                            backgroundColor: _pickedImage != null
+                                ? Colors.green
+                                : Colors.grey,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                           child: const Text(
                             'Xác nhận',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -351,18 +410,21 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
         minWidth: 1024,
         quality: 85,
       );
-      
+
       final compressedFile = File('${image.path}_compressed.jpg');
       await compressedFile.writeAsBytes(compressedBytes);
-      
+
       final sizeInMB = compressedBytes.length / 1024 / 1024;
       final originalSizeInMB = bytes.length / 1024 / 1024;
-      final compressionRatio = ((originalSizeInMB - sizeInMB) / originalSizeInMB * 100);
-      
-      print('🔍 DEBUG: Compressed image size: ${sizeInMB.toStringAsFixed(2)} MB');
-      print('🔍 DEBUG: Compression ratio: ${compressionRatio.toStringAsFixed(1)}%');
+      final compressionRatio =
+          ((originalSizeInMB - sizeInMB) / originalSizeInMB * 100);
+
+      print(
+          '🔍 DEBUG: Compressed image size: ${sizeInMB.toStringAsFixed(2)} MB');
+      print(
+          '🔍 DEBUG: Compression ratio: ${compressionRatio.toStringAsFixed(1)}%');
       print('🔍 DEBUG: Ảnh đã chụp: ${compressedFile.path}');
-      
+
       return XFile(compressedFile.path);
     } catch (e) {
       print('🔍 DEBUG: Error compressing image: $e');
@@ -381,27 +443,30 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
   void _completeDelivery(String code) async {
     // Kiểm tra bắt buộc chụp ảnh
     if (_pickedImage == null) {
-      _showErrorAlert({'message': 'Vui lòng chụp hoặc tải ảnh trước khi hoàn thành.'});
+      _showErrorAlert(
+          {'message': 'Vui lòng chụp hoặc tải ảnh trước khi hoàn thành.'});
       return;
     }
-    
-    setState(() { _loading = true; });
+
+    setState(() {
+      _loading = true;
+    });
     try {
       // Tách code từ format "ORDER2001_102" thành "ORDER2001"
       final orderCode = code.split('_').first;
-      
+
       final requestData = {
         'item_code': orderCode, // Chỉ gửi code, không có quantity
         'note': _noteController.text,
       };
-      
+
       final respData = await ApiCommon.processAction(
         context: context,
         endpoint: 'delivery/complete',
         data: requestData,
         image: _pickedImage,
       );
-      
+
       if (respData['status'] == 'success') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -410,10 +475,10 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
               backgroundColor: Colors.green,
             ),
           );
-          
+
           // Refresh danh sách từ server
           await _fetchDeliveryItems();
-          
+
           // Nếu không còn mã nào, quay về màn hình trước đó
           if (deliveryItems.isEmpty) {
             Navigator.of(context).pop(); // Quay về màn hình vận chuyển
@@ -432,16 +497,22 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
         );
       }
     } catch (e) {
-      _showErrorAlert({'message': 'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin'});
+      _showErrorAlert({
+        'message':
+            'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin'
+      });
     } finally {
       if (mounted) {
-        setState(() { _loading = false; });
+        setState(() {
+          _loading = false;
+        });
       }
     }
   }
 
   void _showErrorAlert(Map<String, dynamic>? responseData) {
-    String errorMessage = 'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin';
+    String errorMessage =
+        'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin';
     if (responseData != null) {
       if (responseData['errors'] != null && responseData['errors'] is Map) {
         final errors = responseData['errors'] as Map<String, dynamic>;
@@ -488,7 +559,7 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
     if (!hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cần quyền truy cập camera để quét mã QR'),
+          content: Text(MESSAGE_ERROR_CAMERA_PERMISSION),
           duration: Duration(seconds: 2),
         ),
       );
@@ -548,10 +619,12 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                       Expanded(
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.qr_code_scanner),
-                          label: const Text('Quét mã', style: TextStyle(fontSize: 16)),
+                          label: const Text('Quét mã',
+                              style: TextStyle(fontSize: 16)),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: _scanQRCode,
                         ),
@@ -562,7 +635,8 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                     const SizedBox(height: 10),
                     Text(
                       _qrErrorMessage!,
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Colors.red, fontWeight: FontWeight.bold),
                     ),
                   ],
                   const SizedBox(height: 16),
@@ -582,7 +656,8 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                   const SizedBox(height: 16),
                   RichText(
                     text: TextSpan(
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                       children: [
                         const TextSpan(
                           text: 'Tổng số danh sách mã đang có: ',
@@ -590,7 +665,8 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                         ),
                         TextSpan(
                           text: '${_filteredItems.length}',
-                          style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.red, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -598,19 +674,22 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                   const SizedBox(height: 10),
                   Expanded(
                     child: _filteredItems.isEmpty
-                        ? const Center(child: Text('Chưa có mã nào đang vận chuyển.'))
+                        ? const Center(
+                            child: Text('Chưa có mã nào đang vận chuyển.'))
                         : Scrollbar(
                             child: ListView.separated(
                               itemCount: _filteredItems.length,
                               separatorBuilder: (_, __) => const Divider(),
                               itemBuilder: (context, index) {
                                 final item = _filteredItems[index];
-                                final label = '${item['order']?['code'] ?? ''}_${item['order']?['total_quantity'] ?? ''}';
+                                final label =
+                                    '${item['order']?['code'] ?? ''}_${item['order']?['total_quantity'] ?? ''}';
                                 return ListTile(
                                   leading: const Icon(Icons.qr_code),
                                   title: Text(
                                     label,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 );
                               },
@@ -622,4 +701,4 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
             ),
     );
   }
-} 
+}

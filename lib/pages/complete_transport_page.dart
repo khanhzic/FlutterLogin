@@ -3,6 +3,7 @@ import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../config/app_config.dart'; 
 
 class CompleteDeliveryPage extends StatefulWidget {
   const CompleteDeliveryPage({super.key});
@@ -161,7 +162,7 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
     if (!hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cần quyền truy cập camera để quét mã QR'),
+          content: Text(MESSAGE_ERROR_CAMERA_PERMISSION),
           duration: Duration(seconds: 2),
         ),
       );
