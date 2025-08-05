@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // Import image_picker
+import 'package:login_app/models/order_code.dart';
 // Required for File
-import 'package:login_app/pages/process_status_page.dart'; // Import the new page
+// Import the new page
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../config/app_config.dart';
 import '../services/api_common.dart';
 import '../services/products_service.dart';
-import 'package:login_app/pages/handle_detail_page.dart'; // Import HandleDetailPage
+// Import HandleDetailPage
 
 class ProcessDetailPage extends StatefulWidget {
   final String processName;
@@ -50,6 +49,9 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   String? _processingAction; // 'end', 'pending', or null
   String? _successMessage;
   String? _initialImplementQuantity;
+  OrderCode? _qrData;
+  String _qr_code = '';
+  int _quantity = 0;
 
   @override
   void initState() {
@@ -78,6 +80,9 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     _notesController.dispose();
     _quantityController.dispose();
     controller?.dispose();
+    _quantity = 0;
+    _qr_code = '';
+    _qrData = null;
     super.dispose();
   }
 
@@ -105,23 +110,23 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         final qrData = scanData.code!;
         // Validate QR code format
         //if (ProductsService.isValidQRCode(qrData)) {
-          setState(() {
-            // _qrCodeController.text = qrData;
-            try {
-              final parseData = ProductsService.parseQRCode(qrData);
-              int quantity = parseData["quantity"] ?? 0;
-              String orderCode = parseData["orderCode"];
+        setState(() {
+          // _qrCodeController.text = qrData;
+          try {
+            final parseData = ProductsService.parseQRCode(qrData);
+            _qrCodeController.text = parseData.orderCode;
+            _qr_code = parseData.orderCode;
+            _qrData = parseData;
+            _quantity = parseData.quantity;
 
-              _qrCodeController.text = '${orderCode}_$quantity';
-
-              _isScanning = false;
-              _qrErrorMessage = null;
-            } catch (e) {
-              //setState(() {
-                _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
-              //});
-            }
-          });
+            _isScanning = false;
+            _qrErrorMessage = null;
+          } catch (e) {
+            //setState(() {
+            _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
+            //});
+          }
+        });
         // } else {
         //   setState(() {
         //     _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
@@ -240,8 +245,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     }
   }
 
-  Future<bool> _callApi(String endpoint, Map<String, dynamic> data,
-      {XFile? image}) async {
+  Future<bool> _callApi(String endpoint, Map<String, dynamic> data, {XFile? image}) async {
     setState(() {
       _isLoading = true;
     });
@@ -259,10 +263,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         return false;
       }
     } catch (e) {
-      _showErrorAlert({
-        'message':
-            'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'
-      });
+      _showErrorAlert({'message': 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'});
       return false;
     } finally {
       setState(() {
@@ -272,8 +273,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   }
 
   void _showErrorAlert(Map<String, dynamic>? responseData) {
-    String errorMessage =
-        'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên';
+    String errorMessage = 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên';
 
     if (responseData != null) {
       // Check if there are validation errors
@@ -324,14 +324,14 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
 
   Future<void> _startProcess() async {
     FocusScope.of(context).unfocus(); // Hide keyboard
-    int totalQuantity = 0;
-    final qrText = _qrCodeController.text;
-    final parts = qrText.split('_');
-    if (parts.length == 2) {
-      try {
-        totalQuantity = int.parse(parts[1]);
-      } catch (e) {}
-    }
+    // int totalQuantity = 0;
+    // final qrText = _qrCodeController.text;
+    // final parts = qrText.split('_');
+    // if (parts.length == 2) {
+    //   try {
+    //     totalQuantity = int.parse(parts[1]);
+    //   } catch (e) {}
+    // }
     setState(() {
       _isLoading = true;
     });
@@ -340,13 +340,15 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         context: context,
         endpoint: 'start-working',
         data: {
-          'order_code': parts[0],
+          'order_code': _qr_code,
           'process_id': widget.processId,
           'implement_quantity': 0,
-          'total_quantity': totalQuantity,
+          'total_quantity': _quantity,
+          'qrcodes': [_qrData],
         },
       );
       if (respData['status'] == 'success') {
+        _qrData = null;
         if (mounted) {
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
@@ -354,10 +356,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         _showErrorAlert(respData);
       }
     } catch (e) {
-      _showErrorAlert({
-        'message':
-            'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'
-      });
+      _showErrorAlert({'message': 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'});
     } finally {
       setState(() {
         _isLoading = false;
@@ -406,8 +405,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
         totalQuantity = int.parse(parts[1]);
       } catch (e) {}
     }
-    final result = await _showNoteAndImageDialog(
-        'Nhập chú thích và chọn ảnh cho trạng thái dừng');
+    final result = await _showNoteAndImageDialog('Nhập chú thích và chọn ảnh cho trạng thái dừng');
     if (result != null && result['note'] != null && result['image'] != null) {
       final success = await _callApi(
           'pending-working',
@@ -432,8 +430,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   }
 
   Future<void> _stopProcess() async {
-    final result = await _showNoteAndImageDialog(
-        'Nhập chú thích và chọn ảnh cho trạng thái báo lỗi');
+    final result = await _showNoteAndImageDialog('Nhập chú thích và chọn ảnh cho trạng thái báo lỗi');
     if (result != null && result['note'] != null && result['image'] != null) {
       await _callApi(
           'work/stop',
@@ -450,8 +447,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
   Future<Map<String, dynamic>?> _showNoteAndImageDialog(String title) async {
     final TextEditingController noteController = TextEditingController();
     XFile? pickedImage;
-    bool canConfirm() =>
-        noteController.text.trim().isNotEmpty && pickedImage != null;
+    bool canConfirm() => noteController.text.trim().isNotEmpty && pickedImage != null;
     return showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
@@ -476,8 +472,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                         icon: const Icon(Icons.photo_camera),
                         label: const Text('Máy ảnh'),
                         onPressed: () async {
-                          final img = await ImagePicker()
-                              .pickImage(source: ImageSource.camera);
+                          final img = await ImagePicker().pickImage(source: ImageSource.camera);
                           if (img != null) setState(() => pickedImage = img);
                         },
                       ),
@@ -485,8 +480,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                         icon: const Icon(Icons.photo_library),
                         label: const Text('Thư viện'),
                         onPressed: () async {
-                          final img = await ImagePicker()
-                              .pickImage(source: ImageSource.gallery);
+                          final img = await ImagePicker().pickImage(source: ImageSource.gallery);
                           if (img != null) setState(() => pickedImage = img);
                         },
                       ),
@@ -495,8 +489,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                   if (pickedImage != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: Text('Đã chọn ảnh: ${pickedImage!.name}',
-                          style: const TextStyle(fontSize: 13)),
+                      child: Text('Đã chọn ảnh: ${pickedImage!.name}', style: const TextStyle(fontSize: 13)),
                     ),
                 ],
               ),
@@ -506,10 +499,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                   child: const Text('Hủy'),
                 ),
                 ElevatedButton(
-                  onPressed: canConfirm()
-                      ? () => Navigator.of(context).pop(
-                          {'note': noteController.text, 'image': pickedImage})
-                      : null,
+                  onPressed: canConfirm() ? () => Navigator.of(context).pop({'note': noteController.text, 'image': pickedImage}) : null,
                   child: const Text('Xác nhận'),
                 ),
               ],
@@ -545,8 +535,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
                 padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
                 child: Text(
                   _qrErrorMessage!,
-                  style: const TextStyle(
-                      color: Colors.red, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -578,17 +567,13 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
             const SizedBox(height: 30),
             if (_processState == ProcessState.idle)
               ElevatedButton(
-                onPressed:
-                    _isStartButtonEnabled && !_isLoading ? _startProcess : null,
+                onPressed: _isStartButtonEnabled && !_isLoading ? _startProcess : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   textStyle: const TextStyle(fontSize: 18),
-                  backgroundColor:
-                      _isStartButtonEnabled ? Colors.blue : Colors.grey,
+                  backgroundColor: _isStartButtonEnabled ? Colors.blue : Colors.grey,
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : Text(widget.isContinue ? 'Tiếp tục' : 'Bắt đầu'),
+                child: _isLoading ? const CircularProgressIndicator() : Text(widget.isContinue ? 'Tiếp tục' : 'Bắt đầu'),
               ),
             // Các nút khác đã được comment lại theo yêu cầu
             // if (_processState == ProcessState.started)

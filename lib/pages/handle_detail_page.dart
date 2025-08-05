@@ -9,7 +9,7 @@ class HandleDetailPage extends StatefulWidget {
   final int? processId;
   final int? status; // Thêm dòng này
   final int? orderId; // Thêm dòng này
-  const HandleDetailPage({Key? key, this.code, this.processId, this.status, this.orderId}) : super(key: key);
+  const HandleDetailPage({super.key, this.code, this.processId, this.status, this.orderId});
 
   @override
   State<HandleDetailPage> createState() => _HandleDetailPageState();

@@ -65,16 +65,13 @@ class _DeliveryPageState extends State<DeliveryPage> {
             //   print('🔍 DEBUG: QR code already exists in list');
             // }
             final parseData = ProductsService.parseQRCode(qrData);
-            if (await ApiCommon.existedItemOnDeliveryList(
-                parseData['orderCode'])) {
-              scannedCodes
-                  .add('${parseData['orderCode']}_${parseData['quantity']}');
+            if (await ApiCommon.existedItemOnDeliveryList(parseData.orderCode)) {
+              scannedCodes.add(parseData.orderCode);
               _isScanning = false;
               _qrErrorMessage = null;
             } else {
               _isScanning = false;
-              _qrErrorMessage =
-                  "Sản phẩm không tồn tại trong danh sách vận chuyển";
+              _qrErrorMessage = "Sản phẩm không tồn tại trong danh sách vận chuyển";
             }
           });
           print('🔍 DEBUG: setState completed');
@@ -156,8 +153,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
   }
 
   void _onSearchChanged() {
-    print(
-        '🔍 DEBUG: _onSearchChanged called with text: "${_searchController.text}"');
+    print('🔍 DEBUG: _onSearchChanged called with text: "${_searchController.text}"');
     setState(() {
       _searchText = _searchController.text.trim();
     });
@@ -169,16 +165,12 @@ class _DeliveryPageState extends State<DeliveryPage> {
     if (_searchText.isEmpty) {
       final sorted = List<String>.from(scannedCodes);
       sorted.sort();
-      print(
-          '🔍 DEBUG: No search text, returning ${sorted.length} sorted codes');
+      print('🔍 DEBUG: No search text, returning ${sorted.length} sorted codes');
       return sorted;
     }
-    final filtered = scannedCodes
-        .where((code) => code.toLowerCase().contains(_searchText.toLowerCase()))
-        .toList();
+    final filtered = scannedCodes.where((code) => code.toLowerCase().contains(_searchText.toLowerCase())).toList();
     filtered.sort();
-    print(
-        '🔍 DEBUG: With search text "$_searchText", returning ${filtered.length} filtered codes');
+    print('🔍 DEBUG: With search text "$_searchText", returning ${filtered.length} filtered codes');
     return filtered;
   }
 
@@ -190,7 +182,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
       _resultMessage = null;
     });
     try {
-      final result = await ApiCommon.startTransport(context, scannedCodes);
+      final result = await ApiCommon.startTransport(context, scannedCodes, await ApiCommon.getDeliveryListFromCache());
       print('🔍 DEBUG: API result: $result');
       if (result['status'] == 'success') {
         setState(() {
@@ -199,12 +191,10 @@ class _DeliveryPageState extends State<DeliveryPage> {
           scannedCodes.clear();
           _searchController.clear();
         });
-        print(
-            '🔍 DEBUG: scannedCodes cleared, new length: ${scannedCodes.length}');
+        print('🔍 DEBUG: scannedCodes cleared, new length: ${scannedCodes.length}');
       } else {
         setState(() {
-          _resultMessage =
-              result['message'] ?? 'Có lỗi xảy ra khi gửi vận chuyển.';
+          _resultMessage = result['message'] ?? 'Có lỗi xảy ra khi gửi vận chuyển.';
         });
       }
     } catch (e) {
@@ -221,8 +211,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
 
   @override
   Widget build(BuildContext context) {
-    print(
-        '🔍 DEBUG: Building transporter page. scannedCodes length: ${scannedCodes.length}, _filteredCodes length: ${_filteredCodes.length}');
+    print('🔍 DEBUG: Building transporter page. scannedCodes length: ${scannedCodes.length}, _filteredCodes length: ${_filteredCodes.length}');
     print('🔍 DEBUG: scannedCodes content: $scannedCodes');
     return Scaffold(
       appBar: AppBar(
@@ -253,12 +242,10 @@ class _DeliveryPageState extends State<DeliveryPage> {
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.qr_code_scanner),
-                    label:
-                        const Text('Quét mã', style: TextStyle(fontSize: 16)),
+                    label: const Text('Quét mã', style: TextStyle(fontSize: 16)),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: _scanQRCode,
                   ),
@@ -266,23 +253,19 @@ class _DeliveryPageState extends State<DeliveryPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: scannedCodes.isNotEmpty && !_isLoading ? _startTransport : null,
                     child: _isLoading
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Text('Bắt đầu', style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: scannedCodes.isNotEmpty && !_isLoading
-                        ? _startTransport
-                        : null,
                   ),
                 ),
               ],
@@ -305,8 +288,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
             const SizedBox(height: 16),
             RichText(
               text: TextSpan(
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 children: [
                   const TextSpan(
                     text: 'Danh sách mã đã quét: ',
@@ -314,8 +296,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
                   ),
                   TextSpan(
                     text: '${scannedCodes.length}',
-                    style: const TextStyle(
-                        color: Colors.blue, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -333,8 +314,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
                             leading: const Icon(Icons.qr_code),
                             title: Text(
                               _filteredCodes[index],
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           );
                         },
@@ -346,9 +326,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
               Text(
                 _resultMessage!,
                 style: TextStyle(
-                  color: _resultMessage == 'Gửi vận chuyển thành công!'
-                      ? Colors.green
-                      : Colors.red,
+                  color: _resultMessage == 'Gửi vận chuyển thành công!' ? Colors.green : Colors.red,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),

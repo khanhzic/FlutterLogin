@@ -19,7 +19,6 @@ import 'about_page.dart'; // Import the new AboutPage
 import '../main.dart'; // Để dùng routeObserver
 import 'package:intl/intl.dart'; // Thêm dòng này để dùng DateFormat
 import 'handle_detail_page.dart'; // Import the new HandleDetailPage
-import '../services/api_common.dart' show TokenExpiredException;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -100,9 +99,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
         var masterDataResult = await MasterDataService.getMasterData(context);
         
         // If master data is null, force refresh from API
-        if (masterDataResult == null) {
-          masterDataResult = await MasterDataService.getMasterData(context, forceRefresh: true);
-        }
+        masterDataResult ??= await MasterDataService.getMasterData(context, forceRefresh: true);
         
         if (masterDataResult != null) {
           setState(() {
@@ -680,7 +677,6 @@ class _HomePageState extends State<HomePage> with RouteAware {
       case 'cuốn':
         return AppIcons.scroll;
       case 'tổ ong và cửa lưới':
-      case 'tổ ong và cửa lưới':
         return AppIcons.honeycomb;
       case 'bạt':
         return AppIcons.net;
@@ -696,7 +692,6 @@ class _HomePageState extends State<HomePage> with RouteAware {
         return Colors.red;
       case 'cuốn':
         return Colors.green;
-      case 'tổ ong và cửa lưới':
       case 'tổ ong và cửa lưới':
         return Colors.amber;
       case 'bạt':

@@ -2,12 +2,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/user.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../config/app_config.dart';
 import '../../services/api_common.dart';
-import '../../services/master_data_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc() : super(AuthInitial()) {
@@ -58,6 +55,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     // Clear token from API cache
     await ApiCommon.clearToken();
+
+    // clear data
+    ApiCommon.clearDeliveryListFromCache();
     
     emit(AuthInitial());
   }

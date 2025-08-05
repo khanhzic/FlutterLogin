@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:login_app/models/order_code.dart';
 import '../models/product.dart';
 
 class ProductsService {
-  final String baseUrl =
-      'https://crudcrud.com/api/021545b9c8f548829477e22dd8cb1409';
+  final String baseUrl = 'https://crudcrud.com/api/021545b9c8f548829477e22dd8cb1409';
   final String resource = 'products';
 
   Future<List<Product>> getAllProducts() async {
@@ -76,14 +76,14 @@ class ProductsService {
     final lines = qrData.trim().split('\n').map((e) => e.trim()).toList();
 
     if (lines.length < 2) {
-      return  false;
+      return false;
     }
 
     final orderCode = lines[0];
     final quantityLine = lines[1];
 
     if (orderCode.isEmpty) {
-      return  false;
+      return false;
     }
 
     // Tìm số nguyên đầu tiên trong dòng 2
@@ -100,7 +100,7 @@ class ProductsService {
     return true;
   }
 
-  static Map<String, dynamic> parseQRCode(String qrData) {
+  static OrderCode parseQRCode(String qrData) {
     final lines = qrData.trim().split('\n').map((e) => e.trim()).toList();
 
     if (lines.length < 2) {
@@ -125,9 +125,12 @@ class ProductsService {
       throw FormatException('Quantity must be a positive number.');
     }
 
-    return {
-      'orderCode': orderCode,
-      'quantity': quantity,
-    };
+    OrderCode orderCodeObj = OrderCode(
+      orderCode: orderCode,
+      quantity: quantity,
+      qrData: qrData,
+    );
+
+    return orderCodeObj;
   }
 }

@@ -57,8 +57,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
 
           setState(() {
             // scannedCodes.add(qrData);
-            scannedCodes.add('${parseData['orderCode']}_${parseData['quantity']}');
-            
+            scannedCodes.add(parseData.orderCode);
+
             // save this data to delivery list
             ApiCommon.addItemToDeliveryList(parseData);
 
@@ -136,9 +136,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
       sorted.sort();
       return sorted;
     }
-    final filtered = scannedCodes
-        .where((code) => code.toLowerCase().contains(_searchText.toLowerCase()))
-        .toList();
+    final filtered = scannedCodes.where((code) => code.toLowerCase().contains(_searchText.toLowerCase())).toList();
     filtered.sort();
     return filtered;
   }
@@ -149,7 +147,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
       _resultMessage = null;
     });
     try {
-      final result = await ApiCommon.startTransport(context, scannedCodes);
+      final result = await ApiCommon.startTransport(context, scannedCodes, await ApiCommon.getDeliveryListFromCache());
       if (result['status'] == 'success') {
         setState(() {
           _resultMessage = 'Gửi vận chuyển thành công!';
@@ -158,8 +156,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
         });
       } else {
         setState(() {
-          _resultMessage =
-              result['message'] ?? 'Có lỗi xảy ra khi gửi vận chuyển.';
+          _resultMessage = result['message'] ?? 'Có lỗi xảy ra khi gửi vận chuyển.';
         });
       }
     } catch (e) {
@@ -190,12 +187,10 @@ class _DeliveryPageState extends State<DeliveryPage> {
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.qr_code_scanner),
-                    label:
-                        const Text('Quét mã', style: TextStyle(fontSize: 16)),
+                    label: const Text('Quét mã', style: TextStyle(fontSize: 16)),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: _scanQRCode,
                   ),
@@ -203,23 +198,19 @@ class _DeliveryPageState extends State<DeliveryPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: scannedCodes.isNotEmpty && !_isLoading ? _startTransport : null,
                     child: _isLoading
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Text('Bắt đầu', style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: scannedCodes.isNotEmpty && !_isLoading
-                        ? _startTransport
-                        : null,
                   ),
                 ),
               ],
@@ -242,8 +233,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
             const SizedBox(height: 16),
             RichText(
               text: TextSpan(
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 children: [
                   const TextSpan(
                     text: 'Danh sách mã đã quét: ',
@@ -251,8 +241,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
                   ),
                   TextSpan(
                     text: '${scannedCodes.length}',
-                    style: const TextStyle(
-                        color: Colors.blue, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -270,8 +259,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
                             leading: const Icon(Icons.qr_code),
                             title: Text(
                               _filteredCodes[index],
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           );
                         },
@@ -283,9 +271,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
               Text(
                 _resultMessage!,
                 style: TextStyle(
-                  color: _resultMessage == 'Gửi vận chuyển thành công!'
-                      ? Colors.green
-                      : Colors.red,
+                  color: _resultMessage == 'Gửi vận chuyển thành công!' ? Colors.green : Colors.red,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),

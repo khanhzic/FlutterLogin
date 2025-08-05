@@ -11,7 +11,6 @@ import 'package:intl/intl.dart';
 import '../services/api_common.dart';
 import 'dart:core';
 import '../main.dart';
-import '../config/app_config.dart';
 import '../widgets/profile_image_widget.dart';
 import '../pages/about_page.dart';
 
@@ -51,7 +50,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     setState(() { _loading = true; });
     try {
       final report = await ApiCommon.getUserReport(context);
-      final data = (report != null && report is Map && report['data'] != null && report['data'] is Map)
+      final data = (report != null && report['data'] != null && report['data'] is Map)
           ? report['data'] as Map
           : <String, dynamic>{};
       final statistics = (data.isNotEmpty && data['statistics'] != null && data['statistics'] is Map)
@@ -107,10 +106,10 @@ class _MyProfilePageState extends State<MyProfilePage> {
             padding: EdgeInsets.zero,
             children: <Widget>[
               UserAccountsDrawerHeader(
-                accountName: Text(widget.user?.name ?? ''),
-                accountEmail: Text(widget.user?.email ?? ''),
+                accountName: Text(widget.user.name ?? ''),
+                accountEmail: Text(widget.user.email ?? ''),
                 currentAccountPicture: ProfileImageWidget(
-                  profilePhotoPath: widget.user?.profilePhotoPath,
+                  profilePhotoPath: widget.user.profilePhotoPath,
                   radius: 40.0,
                 ),
               ),
@@ -119,26 +118,22 @@ class _MyProfilePageState extends State<MyProfilePage> {
                 title: const Text('Tài khoản'),
                 onTap: () {
                   Navigator.pop(context);
-                  if (widget.user != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => MyProfilePage(user: widget.user!)),
-                    );
-                  }
-                },
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MyProfilePage(user: widget.user)),
+                  );
+                                },
               ),
               ListTile(
                 leading: const Icon(Icons.account_circle),
                 title: const Text('Công việc'),
                 onTap: () {
                   Navigator.pop(context);
-                  if (widget.user != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => HomePage()),
-                    );
-                  }
-                },
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => HomePage()),
+                  );
+                                },
               ),
               ListTile(
                 leading: const Icon(Icons.info_outline),
@@ -190,7 +185,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tài khoản: ' + widget.user.name,
+                  'Tài khoản: ${widget.user.name}',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87),
                 ),
                 const SizedBox(height: 12),
