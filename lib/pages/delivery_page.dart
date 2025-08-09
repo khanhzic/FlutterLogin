@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../services/api_common.dart';
 import '../services/products_service.dart';
 import '../config/app_config.dart';
+import '../models/order_code.dart';
 
 class DeliveryPage extends StatefulWidget {
   const DeliveryPage({super.key});
@@ -16,11 +17,12 @@ class _DeliveryPageState extends State<DeliveryPage> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
   bool _isScanning = false;
-  List<String> scannedCodes = [];
+  List<OrderCode> scannedCodes = [];
   String? _qrErrorMessage;
   String _searchText = '';
   bool _isLoading = false;
   String? _resultMessage;
+
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -50,30 +52,71 @@ class _DeliveryPageState extends State<DeliveryPage> {
       if (scanData.code != null) {
         try {
           final qrData = scanData.code!;
-
           final parseData = ProductsService.parseQRCode(qrData);
-          //int quantity = parseData["quantity"] ?? 0;
-          // String orderCode = parseData["orderCode"];
-
-          setState(() {
-            // scannedCodes.add(qrData);
-            scannedCodes.add(parseData.orderCode);
-
-            // save this data to delivery list
-            ApiCommon.addItemToDeliveryList(parseData);
-
-            _isScanning = false;
-            _qrErrorMessage = null;
-          });
+          
+          // Kiểm tra xem mã đã tồn tại trong list chưa
+          if (_isCodeDuplicate(parseData.orderCode)) {
+            // Mã đã tồn tại - đóng camera và hiển thị thông báo lỗi
+            controller.pauseCamera();
+            Navigator.pop(context);
+            
+            // Hiển thị thông báo lỗi sau khi trở về màn hình chính
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                _qrErrorMessage = 'Mã ${parseData.orderCode} đã tồn tại trong danh sách!';
+              });
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Mã ${parseData.orderCode} đã tồn tại! Vui lòng scan mã khác.'),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 3),
+                  action: SnackBarAction(
+                    label: 'Đóng',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    },
+                  ),
+                ),
+              );
+            });
+          } else {
+            // Mã mới - thêm vào danh sách và hiển thị thông báo thành công
+            controller.pauseCamera();
+            Navigator.pop(context);
+            
+            // Thêm vào danh sách sau khi trở về màn hình chính
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                scannedCodes.add(parseData);
+                _qrErrorMessage = null;
+              });
+              
+              // Lưu vào delivery list
+              ApiCommon.addItemToDeliveryList(parseData);
+              
+              // Hiển thị thông báo thành công
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Đã thêm mã ${parseData.orderCode} vào danh sách!'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            });
+          }
         } catch (e) {
-          setState(() {
-            _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
+          // Lỗi parse QR code
+          controller.pauseCamera();
+          Navigator.pop(context);
+          
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              _qrErrorMessage = MESSAGE_ERROR_QR_CODE;
+            });
           });
-          return;
         }
-
-        controller.pauseCamera();
-        Navigator.pop(context);
       }
     });
   }
@@ -91,6 +134,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
     }
     setState(() {
       _isScanning = true;
+      _qrErrorMessage = null; // Xóa thông báo lỗi cũ khi bắt đầu quét mới
+
     });
     await Navigator.push(
       context,
@@ -130,14 +175,21 @@ class _DeliveryPageState extends State<DeliveryPage> {
     });
   }
 
-  List<String> get _filteredCodes {
+  // Kiểm tra xem mã có tồn tại trong list chưa
+  bool _isCodeDuplicate(String orderCode) {
+    return scannedCodes.any((item) => item.orderCode == orderCode);
+  }
+
+
+
+  List<OrderCode> get _filteredCodes {
     if (_searchText.isEmpty) {
-      final sorted = List<String>.from(scannedCodes);
-      sorted.sort();
+      final sorted = List<OrderCode>.from(scannedCodes);
+      sorted.sort((a, b) => a.orderCode.compareTo(b.orderCode));
       return sorted;
     }
-    final filtered = scannedCodes.where((code) => code.toLowerCase().contains(_searchText.toLowerCase())).toList();
-    filtered.sort();
+    final filtered = scannedCodes.where((code) => code.orderCode.toLowerCase().contains(_searchText.toLowerCase())).toList();
+    filtered.sort((a, b) => a.orderCode.compareTo(b.orderCode));
     return filtered;
   }
 
@@ -147,7 +199,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
       _resultMessage = null;
     });
     try {
-      final result = await ApiCommon.startTransport(context, scannedCodes, await ApiCommon.getDeliveryListFromCache());
+      final result = await ApiCommon.startTransport(context, scannedCodes.map((item) => item.orderCode).toList(), await ApiCommon.getDeliveryListFromCache());
       if (result['status'] == 'success') {
         setState(() {
           _resultMessage = 'Gửi vận chuyển thành công!';
@@ -255,12 +307,25 @@ class _DeliveryPageState extends State<DeliveryPage> {
                         itemCount: _filteredCodes.length,
                         separatorBuilder: (_, __) => const Divider(),
                         itemBuilder: (context, index) {
+                          final item = _filteredCodes[index];
                           return ListTile(
                             leading: const Icon(Icons.qr_code),
                             title: Text(
-                              _filteredCodes[index],
+                              item.orderCode,
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
+                            subtitle: item.qrData.isNotEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    item.qrData,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                )
+                              : null,
                           );
                         },
                       ),

@@ -18,7 +18,7 @@ class CompleteDeliveryPage extends StatefulWidget {
   State<CompleteDeliveryPage> createState() => _CompleteDeliveryPageState();
 }
 
-class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
+class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with WidgetsBindingObserver {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
   bool _isScanning = false;
@@ -34,6 +34,7 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchDeliveryItems();
   }
 
@@ -42,12 +43,17 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
       _loading = true;
     });
     try {
-      await ApiCommon.getListDeliveryItems(context);
-
-      setState(() async {
-        deliveryItems = await ApiCommon.getDeliveryListFromCache();
+      // Chỉ lấy data từ cache local, không gọi server
+      final items = await ApiCommon.getDeliveryListFromCache();
+      print('🔍 DEBUG: _fetchDeliveryItems - Retrieved ${items.length} items from cache');
+      for (int i = 0; i < items.length; i++) {
+        print('🔍 DEBUG: Item $i: orderCode=${items[i].orderCode}, quantity=${items[i].quantity}, qrData="${items[i].qrData}"');
+      }
+      setState(() {
+        deliveryItems = items;
       });
     } catch (e) {
+      print('🔍 ERROR: Failed to fetch delivery items from cache: $e');
       // handle error, optionally show a message
     } finally {
       setState(() {
@@ -57,23 +63,39 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
   }
 
   List<OrderCode> get _filteredItems {
-    // if (_searchText.isEmpty) {
-    //   final sorted = List<Map<String, dynamic>>.from(deliveryItems);
-    //   sorted.sort((a, b) => ((a['order']?['code'] ?? '') as String).compareTo((b['order']?['code'] ?? '') as String));
-    //   return sorted;
-    // }
-    // final filtered = deliveryItems.where((item) => ((item['order']?['code'] ?? '') as String).toLowerCase().contains(_searchText.toLowerCase())).toList();
-    // filtered.sort((a, b) => ((a['order']?['code'] ?? '') as String).compareTo((b['order']?['code'] ?? '') as String));
-    return deliveryItems;
+    if (_searchText.isEmpty) {
+      final sorted = List<OrderCode>.from(deliveryItems);
+      sorted.sort((a, b) => a.orderCode.compareTo(b.orderCode));
+      return sorted;
+    }
+    final filtered = deliveryItems.where((item) => item.orderCode.toLowerCase().contains(_searchText.toLowerCase())).toList();
+    filtered.sort((a, b) => a.orderCode.compareTo(b.orderCode));
+    return filtered;
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     controller?.dispose();
     _searchController.dispose();
     _noteController.dispose();
     super.dispose();
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Khi app trở về foreground, refresh data
+    if (state == AppLifecycleState.resumed) {
+      // Chỉ refresh nếu không đang loading
+      if (!_loading) {
+        _fetchDeliveryItems();
+      }
+    }
+  }
+
+
 
   void _onSearchChanged() {
     setState(() {
@@ -585,6 +607,16 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                           onPressed: _scanQRCode,
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Làm mới', style: TextStyle(fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: _fetchDeliveryItems,
+                      ),
                     ],
                   ),
                   if (_qrErrorMessage != null) ...[
@@ -624,27 +656,59 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> {
                       ],
                     ),
                   ),
+                  // Debug info
+                  if (deliveryItems.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Debug: ${deliveryItems.length} items in deliveryItems, ${_filteredItems.length} items in _filteredItems',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   Expanded(
-                    child: _filteredItems.isEmpty
+                    child: Builder(
+                      builder: (context) => _filteredItems.isEmpty
                         ? const Center(child: Text('Chưa có mã nào đang vận chuyển.'))
-                        : Scrollbar(
-                            child: ListView.separated(
-                              itemCount: _filteredItems.length,
-                              separatorBuilder: (_, __) => const Divider(),
-                              itemBuilder: (context, index) {
-                                final item = _filteredItems[index];
-                                final label = '${item.orderCode ?? ''}';
-                                return ListTile(
-                                  leading: const Icon(Icons.qr_code),
-                                  title: Text(
-                                    label,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                );
-                              },
+                        : RefreshIndicator(
+                            onRefresh: _fetchDeliveryItems,
+                            child: Scrollbar(
+                              child: ListView.separated(
+                                itemCount: _filteredItems.length,
+                                separatorBuilder: (_, __) => const Divider(),
+                                itemBuilder: (context, index) {
+                                  final item = _filteredItems[index];
+                                  final label = '${item.orderCode ?? ''}';
+                                    
+                                    // Debug logging
+                                    print('🔍 DEBUG: Building ListTile for item $index:');
+                                    print('🔍 DEBUG: - orderCode: ${item.orderCode}');
+                                    print('🔍 DEBUG: - qrData: "${item.qrData}"');
+                                    print('🔍 DEBUG: - qrData.isEmpty: ${item.qrData.isEmpty}');
+                                    
+                                  return ListTile(
+                                    leading: const Icon(Icons.qr_code),
+                                    title: Text(
+                                      label,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    subtitle: item.qrData.isNotEmpty
+                                      ? Padding(
+                                          padding: const EdgeInsets.only(top: 8.0),
+                                          child: Text(
+                                            item.qrData,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        )
+                                      : null,
+                                  );
+                                },
+                              ),
                             ),
                           ),
+                    ),
                   ),
                 ],
               ),

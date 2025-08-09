@@ -475,7 +475,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CompleteDeliveryPage()),
+                    MaterialPageRoute(builder: (context) => CompleteDeliveryPage()),
                   );
                 },
               ),

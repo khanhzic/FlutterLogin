@@ -570,10 +570,21 @@ class ApiCommon {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         };
+        
+        print('🔍 DEBUG: startTransport - Starting...');
+        print('🔍 DEBUG: - productCodes: $productCodes');
+        print('🔍 DEBUG: - qrcodes length: ${qrcodes.length}');
+        for (int i = 0; i < qrcodes.length; i++) {
+          print('🔍 DEBUG: - qrcodes[$i]: orderCode=${qrcodes[i].orderCode}, quantity=${qrcodes[i].quantity}, qrData="${qrcodes[i].qrData}"');
+        }
+        
         final body = {
           'item_codes': productCodes,
           'qrcodes': qrcodes,
         };
+        
+        print('🔍 DEBUG: - Request body: ${jsonEncode(body)}');
+        
         _logRequest('POST', url, headers, body);
         return await http.post(
           Uri.parse(url),
@@ -633,11 +644,56 @@ class ApiCommon {
   static Future<List<OrderCode>> getDeliveryListFromCache() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_deliveryListCode);
-    if (jsonString == null) return [];
+    
+    print('🔍 DEBUG: getDeliveryListFromCache - Starting...');
+    print('🔍 DEBUG: jsonString is null: ${jsonString == null}');
+    print('🔍 DEBUG: jsonString is empty: ${jsonString?.isEmpty ?? true}');
+    print('🔍 DEBUG: jsonString content: "$jsonString"');
+    
+    if (jsonString == null) {
+      print('🔍 DEBUG: Cache is null, returning empty list');
+      return [];
+    }
 
-    final List<dynamic> decoded = jsonDecode(jsonString);
-    final List<OrderCode> result = decoded.map((item) => OrderCode.fromJson(item as Map<String, dynamic>)).toList();
-    return result;
+    try {
+      final List<dynamic> decoded = jsonDecode(jsonString);
+      print('🔍 DEBUG: Successfully decoded JSON, found ${decoded.length} items');
+      
+      List<OrderCode> result = [];
+      
+      // Parse từng item một cách an toàn
+      for (int i = 0; i < decoded.length; i++) {
+        var item = decoded[i];
+        print('🔍 DEBUG: Processing item $i: $item');
+        try {
+          if (item is Map<String, dynamic>) {
+            OrderCode orderCode = OrderCode.fromJson(item);
+            result.add(orderCode);
+            print('🔍 DEBUG: Successfully parsed item $i: orderCode=${orderCode.orderCode}, quantity=${orderCode.quantity}');
+          } else {
+            print('🔍 ERROR: Item $i is not Map<String, dynamic>, type: ${item.runtimeType}');
+          }
+        } catch (parseError) {
+          print('🔍 ERROR: Failed to parse item $i: $parseError');
+          print('🔍 ERROR: Item data: $item');
+        }
+      }
+      
+      // Debug log để kiểm tra dữ liệu
+      print('🔍 DEBUG: getDeliveryListFromCache - Final result: ${result.length} items:');
+      for (int i = 0; i < result.length; i++) {
+        print('🔍 DEBUG: Item $i: orderCode=${result[i].orderCode}, quantity=${result[i].quantity}, qrData="${result[i].qrData}"');
+      }
+      
+      return result;
+    } catch (e) {
+      print('🔍 ERROR: Failed to parse delivery list from cache: $e');
+      print('🔍 ERROR: JSON string: $jsonString');
+      // Nếu có lỗi parse, xóa cache và trả về list rỗng
+      await prefs.remove(_deliveryListCode);
+      print('🔍 DEBUG: Cleared corrupted cache data');
+      return [];
+    }
   }
 
   // Store token in cache
@@ -645,40 +701,130 @@ class ApiCommon {
     final prefs = await SharedPreferences.getInstance();
     List<OrderCode> data = [];
     for (var item in dataList) {
-      OrderCode orderCode = new OrderCode(orderCode: item.order.code, quantity: item.order.totalQuantity, qrData: item.order.notes);
+      print('🔍 DEBUG: Creating OrderCode from server data:');
+      print('🔍 DEBUG: - orderCode: ${item.order.code}');
+      print('🔍 DEBUG: - quantity: ${item.order.totalQuantity}');
+      print('🔍 DEBUG: - qrData (notes): ${item.order.notes}');
+      
+      // Chỉ sử dụng notes từ server nếu không rỗng
+      String qrData = item.order.notes.isNotEmpty ? item.order.notes : "";
+      
+      OrderCode orderCode = new OrderCode(orderCode: item.order.code, quantity: item.order.totalQuantity, qrData: qrData);
       data.add(orderCode); // Append to list
     }
 
-    final jsonString = jsonEncode(data); // convert to JSON string
-    await prefs.setString(_deliveryListCode, jsonString);
+    try {
+      final jsonString = jsonEncode(data); // convert to JSON string
+      await prefs.setString(_deliveryListCode, jsonString);
+      print('🔍 DEBUG: Successfully stored delivery list to cache');
+    } catch (e) {
+      print('🔍 ERROR: Failed to encode delivery list to JSON: $e');
+      // Nếu có lỗi encode, thử encode từng item riêng lẻ
+      List<Map<String, dynamic>> safeData = [];
+      for (var item in data) {
+        try {
+          safeData.add(item.toJson());
+        } catch (itemError) {
+          print('🔍 ERROR: Failed to encode item ${item.orderCode}: $itemError');
+        }
+      }
+      if (safeData.isNotEmpty) {
+        try {
+          final safeJsonString = jsonEncode(safeData);
+          await prefs.setString(_deliveryListCode, safeJsonString);
+          print('🔍 DEBUG: Successfully stored safe delivery list to cache');
+        } catch (finalError) {
+          print('🔍 ERROR: Failed to encode safe delivery list: $finalError');
+        }
+      }
+    }
   }
 
   static Future<void> addItemToDeliveryList(OrderCode newItem) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_deliveryListCode);
 
+    print('🔍 DEBUG: addItemToDeliveryList - Starting...');
+    print('🔍 DEBUG: - orderCode: ${newItem.orderCode}');
+    print('🔍 DEBUG: - quantity: ${newItem.quantity}');
+    print('🔍 DEBUG: - qrData (scanned): ${newItem.qrData}');
+    print('🔍 DEBUG: - jsonString is null: ${jsonString == null}');
+    print('🔍 DEBUG: - jsonString is empty: ${jsonString?.isEmpty ?? true}');
+    print('🔍 DEBUG: - jsonString content: "$jsonString"');
+
     if (jsonString == null || jsonString.isEmpty || jsonString == '[]') {
+      print('🔍 DEBUG: Cache is empty or null, creating new list with scanned item');
+      List<OrderCode> newList = [newItem];
+      final newJsonString = jsonEncode(newList);
+      await prefs.setString(_deliveryListCode, newJsonString);
+      print('🔍 DEBUG: Successfully created new cache with scanned item');
       return;
     }
 
-    List<OrderCode> currentList = jsonDecode(jsonString).map((item) => OrderCode.fromJson(item as Map<String, dynamic>)).toList();
-
-    if (await existedItemOnDeliveryList(newItem.orderCode)) {
-      // If item already exists, no need to add again
-      print('Item with orderCode ${newItem.orderCode} already exists in delivery list');
-      return;
-    }
-
-    for (OrderCode item in currentList) {
-      if (item.orderCode == newItem.orderCode) {
-        // If item already exists, no need to add again
-        print('Item with orderCode ${newItem.orderCode} already exists in delivery list');
-        return;
+    try {
+      final List<dynamic> decoded = jsonDecode(jsonString);
+      print('🔍 DEBUG: Successfully decoded existing cache, found ${decoded.length} items');
+      
+      List<OrderCode> currentList = [];
+      
+      // Parse từng item một cách an toàn
+      for (int i = 0; i < decoded.length; i++) {
+        var item = decoded[i];
+        print('🔍 DEBUG: Processing existing item $i: $item');
+        try {
+          if (item is Map<String, dynamic>) {
+            OrderCode orderCode = OrderCode.fromJson(item);
+            currentList.add(orderCode);
+            print('🔍 DEBUG: Successfully parsed existing item $i: orderCode=${orderCode.orderCode}, quantity=${orderCode.quantity}');
+          } else {
+            print('🔍 ERROR: Existing item $i is not Map<String, dynamic>, type: ${item.runtimeType}');
+          }
+        } catch (parseError) {
+          print('🔍 ERROR: Failed to parse existing item $i: $parseError');
+          print('🔍 ERROR: Item data: $item');
+        }
       }
-    }
-    currentList.add(newItem); // Append to end of list
 
-    await prefs.setString(_deliveryListCode, jsonEncode(currentList));
+      // Kiểm tra xem item đã tồn tại chưa
+      bool itemExists = false;
+      for (int i = 0; i < currentList.length; i++) {
+        if (currentList[i].orderCode == newItem.orderCode) {
+          // Cập nhật qrData nếu item đã tồn tại
+          currentList[i] = OrderCode(
+            orderCode: currentList[i].orderCode,
+            quantity: currentList[i].quantity,
+            qrData: newItem.qrData, // Cập nhật với qrData mới từ scan
+          );
+          itemExists = true;
+          print('🔍 DEBUG: Updated existing item with new qrData');
+          break;
+        }
+      }
+
+      if (!itemExists) {
+        currentList.add(newItem);
+        print('🔍 DEBUG: Added new item to delivery list');
+      }
+
+      // Lưu lại vào cache
+      final updatedJsonString = jsonEncode(currentList);
+      await prefs.setString(_deliveryListCode, updatedJsonString);
+      print('🔍 DEBUG: Successfully saved updated delivery list to cache');
+      print('🔍 DEBUG: Final cache content: $updatedJsonString');
+      
+    } catch (e) {
+      print('🔍 ERROR: Failed to parse delivery list from cache: $e');
+      print('🔍 ERROR: JSON string: $jsonString');
+      // Nếu có lỗi parse, xóa cache và tạo mới
+      await prefs.remove(_deliveryListCode);
+      print('🔍 DEBUG: Cleared corrupted cache data');
+      
+      // Tạo cache mới với item hiện tại
+      List<OrderCode> newList = [newItem];
+      final newJsonString = jsonEncode(newList);
+      await prefs.setString(_deliveryListCode, newJsonString);
+      print('🔍 DEBUG: Created new cache with scanned item after clearing corrupted data');
+    }
   }
 
   // Clear token from cache
@@ -687,10 +833,29 @@ class ApiCommon {
     final jsonString = prefs.getString(_deliveryListCode);
 
     if (jsonString != null) {
-      List<dynamic> decodedList = jsonDecode(jsonString);
-      List<Map<String, dynamic>> updatedList = decodedList.map((e) => Map<String, dynamic>.from(e)).where((item) => item['orderCode'] != code).toList();
+      try {
+        List<dynamic> decodedList = jsonDecode(jsonString);
+        List<Map<String, dynamic>> updatedList = [];
+        
+        for (var item in decodedList) {
+          try {
+            if (item is Map<String, dynamic> && item['orderCode'] != code) {
+              updatedList.add(Map<String, dynamic>.from(item));
+            }
+          } catch (parseError) {
+            print('🔍 ERROR: Failed to parse item in removeItemToDeliveryList: $parseError');
+          }
+        }
 
-      await prefs.setString(_deliveryListCode, jsonEncode(updatedList));
+        await prefs.setString(_deliveryListCode, jsonEncode(updatedList));
+        print('🔍 DEBUG: Successfully removed item with code: $code');
+      } catch (e) {
+        print('🔍 ERROR: Failed to remove item from delivery list: $e');
+        print('🔍 ERROR: JSON string: $jsonString');
+        // Nếu có lỗi, xóa cache
+        await prefs.remove(_deliveryListCode);
+        print('🔍 DEBUG: Cleared corrupted cache data');
+      }
     }
   }
 
@@ -705,13 +870,27 @@ class ApiCommon {
 
     if (jsonString == null) return false;
 
-    final List<dynamic> decodedList = jsonDecode(jsonString);
-    List<Map<String, dynamic>> updatedList = decodedList.map((e) => Map<String, dynamic>.from(e)).where((item) => item['orderCode'] == key).toList();
+    try {
+      final List<dynamic> decodedList = jsonDecode(jsonString);
+      
+      for (var item in decodedList) {
+        try {
+          if (item is Map<String, dynamic> && item['orderCode'] == key) {
+            return true;
+          }
+        } catch (parseError) {
+          print('🔍 ERROR: Failed to parse item in existedItemOnDeliveryList: $parseError');
+        }
+      }
 
-    if (updatedList.isNotEmpty && updatedList.length > 0) {
-      return true;
+      return false;
+    } catch (e) {
+      print('🔍 ERROR: Failed to check item existence: $e');
+      print('🔍 ERROR: JSON string: $jsonString');
+      // Nếu có lỗi, xóa cache và trả về false
+      await prefs.remove(_deliveryListCode);
+      print('🔍 DEBUG: Cleared corrupted cache data');
+      return false;
     }
-
-    return false;
   }
 }
