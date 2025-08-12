@@ -65,7 +65,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
             //   print('🔍 DEBUG: QR code already exists in list');
             // }
             final parseData = ProductsService.parseQRCode(qrData);
-            if (await ApiCommon.existedItemOnDeliveryList(parseData.orderCode)) {
+            if (await ApiCommon.existedItemOnDeliveryList(parseData.orderCode) != null) {
               scannedCodes.add(parseData.orderCode);
               _isScanning = false;
               _qrErrorMessage = null;

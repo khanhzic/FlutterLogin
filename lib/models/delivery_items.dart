@@ -14,6 +14,7 @@ class DeliveryItems {
   final String? createdAt;
   final String? updatedAt;
   final Order order;
+  final int number_packages;
 
   DeliveryItems({
     required this.id,
@@ -31,6 +32,7 @@ class DeliveryItems {
     this.createdAt,
     this.updatedAt,
     required this.order,
+    this.number_packages = 0,
   });
 
   factory DeliveryItems.fromJson(Map<String, dynamic> json) {
@@ -50,6 +52,7 @@ class DeliveryItems {
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
       order: Order.fromJson(json['order'] as Map<String, dynamic>),
+      number_packages: json['number_packages'] as int? ?? 0,
     );
   }
 
@@ -70,6 +73,7 @@ class DeliveryItems {
       'created_at': createdAt,
       'updated_at': updatedAt,
       'order': order.toJson(),
+      'number_packages': number_packages
     };
   }
 }

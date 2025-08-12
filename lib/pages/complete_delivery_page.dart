@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:login_app/models/delivery_items.dart';
 import 'package:login_app/models/order_code.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -85,7 +86,7 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     // Khi app trở về foreground, refresh data
     if (state == AppLifecycleState.resumed) {
       // Chỉ refresh nếu không đang loading
@@ -94,8 +95,6 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
       }
     }
   }
-
-
 
   void _onSearchChanged() {
     setState(() {
@@ -124,13 +123,14 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
           //int quantity = parseData["quantity"] ?? 0;
           // String orderCode = parseData["orderCode"];
           final exists = ApiCommon.existedItemOnDeliveryList(parseData.orderCode);
-          if (await exists) {
+          // ignore: unnecessary_null_comparison
+          if (exists != null) {
             setState(() {
               _selectedCode = parseData.orderCode;
               _qrErrorMessage = null;
             });
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _showFinishTransportDialog(parseData.orderCode);
+              _showFinishTransportDialog(parseData.orderCode, exists as DeliveryItems);
             });
           } else {
             setState(() {
@@ -151,7 +151,7 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
     });
   }
 
-  void _showFinishTransportDialog(String code) {
+  void _showFinishTransportDialog(String code, DeliveryItems item) {
     // Xóa ảnh cũ khi mở dialog mới
     setState(() {
       _pickedImage = null;
@@ -178,6 +178,11 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
                   children: [
                     Text(
                       'Hoàn thành cho mã: $code',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Số lượng gói: ${item.number_packages}',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                     const SizedBox(height: 20),
@@ -668,46 +673,46 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
                   Expanded(
                     child: Builder(
                       builder: (context) => _filteredItems.isEmpty
-                        ? const Center(child: Text('Chưa có mã nào đang vận chuyển.'))
-                        : RefreshIndicator(
-                            onRefresh: _fetchDeliveryItems,
-                            child: Scrollbar(
-                              child: ListView.separated(
-                                itemCount: _filteredItems.length,
-                                separatorBuilder: (_, __) => const Divider(),
-                                itemBuilder: (context, index) {
-                                  final item = _filteredItems[index];
-                                  final label = '${item.orderCode ?? ''}';
-                                    
+                          ? const Center(child: Text('Chưa có mã nào đang vận chuyển.'))
+                          : RefreshIndicator(
+                              onRefresh: _fetchDeliveryItems,
+                              child: Scrollbar(
+                                child: ListView.separated(
+                                  itemCount: _filteredItems.length,
+                                  separatorBuilder: (_, __) => const Divider(),
+                                  itemBuilder: (context, index) {
+                                    final item = _filteredItems[index];
+                                    final label = '${item.orderCode ?? ''}';
+
                                     // Debug logging
                                     print('🔍 DEBUG: Building ListTile for item $index:');
                                     print('🔍 DEBUG: - orderCode: ${item.orderCode}');
                                     print('🔍 DEBUG: - qrData: "${item.qrData}"');
                                     print('🔍 DEBUG: - qrData.isEmpty: ${item.qrData.isEmpty}');
-                                    
-                                  return ListTile(
-                                    leading: const Icon(Icons.qr_code),
-                                    title: Text(
-                                      label,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                    subtitle: item.qrData.isNotEmpty
-                                      ? Padding(
-                                          padding: const EdgeInsets.only(top: 8.0),
-                                          child: Text(
-                                            item.qrData,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        )
-                                      : null,
-                                  );
-                                },
+
+                                    return ListTile(
+                                      leading: const Icon(Icons.qr_code),
+                                      title: Text(
+                                        label,
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      subtitle: item.qrData.isNotEmpty
+                                          ? Padding(
+                                              padding: const EdgeInsets.only(top: 8.0),
+                                              child: Text(
+                                                item.qrData,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            )
+                                          : null,
+                                    );
+                                  },
+                                ),
                               ),
                             ),
-                          ),
                     ),
                   ),
                 ],

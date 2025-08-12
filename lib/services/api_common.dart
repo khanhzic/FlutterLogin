@@ -570,21 +570,21 @@ class ApiCommon {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         };
-        
+
         print('🔍 DEBUG: startTransport - Starting...');
         print('🔍 DEBUG: - productCodes: $productCodes');
         print('🔍 DEBUG: - qrcodes length: ${qrcodes.length}');
         for (int i = 0; i < qrcodes.length; i++) {
           print('🔍 DEBUG: - qrcodes[$i]: orderCode=${qrcodes[i].orderCode}, quantity=${qrcodes[i].quantity}, qrData="${qrcodes[i].qrData}"');
         }
-        
+
         final body = {
           'item_codes': productCodes,
           'qrcodes': qrcodes,
         };
-        
+
         print('🔍 DEBUG: - Request body: ${jsonEncode(body)}');
-        
+
         _logRequest('POST', url, headers, body);
         return await http.post(
           Uri.parse(url),
@@ -644,12 +644,12 @@ class ApiCommon {
   static Future<List<OrderCode>> getDeliveryListFromCache() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_deliveryListCode);
-    
+
     print('🔍 DEBUG: getDeliveryListFromCache - Starting...');
     print('🔍 DEBUG: jsonString is null: ${jsonString == null}');
     print('🔍 DEBUG: jsonString is empty: ${jsonString?.isEmpty ?? true}');
     print('🔍 DEBUG: jsonString content: "$jsonString"');
-    
+
     if (jsonString == null) {
       print('🔍 DEBUG: Cache is null, returning empty list');
       return [];
@@ -658,9 +658,9 @@ class ApiCommon {
     try {
       final List<dynamic> decoded = jsonDecode(jsonString);
       print('🔍 DEBUG: Successfully decoded JSON, found ${decoded.length} items');
-      
+
       List<OrderCode> result = [];
-      
+
       // Parse từng item một cách an toàn
       for (int i = 0; i < decoded.length; i++) {
         var item = decoded[i];
@@ -678,13 +678,13 @@ class ApiCommon {
           print('🔍 ERROR: Item data: $item');
         }
       }
-      
+
       // Debug log để kiểm tra dữ liệu
       print('🔍 DEBUG: getDeliveryListFromCache - Final result: ${result.length} items:');
       for (int i = 0; i < result.length; i++) {
         print('🔍 DEBUG: Item $i: orderCode=${result[i].orderCode}, quantity=${result[i].quantity}, qrData="${result[i].qrData}"');
       }
-      
+
       return result;
     } catch (e) {
       print('🔍 ERROR: Failed to parse delivery list from cache: $e');
@@ -705,10 +705,10 @@ class ApiCommon {
       print('🔍 DEBUG: - orderCode: ${item.order.code}');
       print('🔍 DEBUG: - quantity: ${item.order.totalQuantity}');
       print('🔍 DEBUG: - qrData (notes): ${item.order.notes}');
-      
+
       // Chỉ sử dụng notes từ server nếu không rỗng
       String qrData = item.order.notes.isNotEmpty ? item.order.notes : "";
-      
+
       OrderCode orderCode = new OrderCode(orderCode: item.order.code, quantity: item.order.totalQuantity, qrData: qrData);
       data.add(orderCode); // Append to list
     }
@@ -764,9 +764,9 @@ class ApiCommon {
     try {
       final List<dynamic> decoded = jsonDecode(jsonString);
       print('🔍 DEBUG: Successfully decoded existing cache, found ${decoded.length} items');
-      
+
       List<OrderCode> currentList = [];
-      
+
       // Parse từng item một cách an toàn
       for (int i = 0; i < decoded.length; i++) {
         var item = decoded[i];
@@ -811,14 +811,13 @@ class ApiCommon {
       await prefs.setString(_deliveryListCode, updatedJsonString);
       print('🔍 DEBUG: Successfully saved updated delivery list to cache');
       print('🔍 DEBUG: Final cache content: $updatedJsonString');
-      
     } catch (e) {
       print('🔍 ERROR: Failed to parse delivery list from cache: $e');
       print('🔍 ERROR: JSON string: $jsonString');
       // Nếu có lỗi parse, xóa cache và tạo mới
       await prefs.remove(_deliveryListCode);
       print('🔍 DEBUG: Cleared corrupted cache data');
-      
+
       // Tạo cache mới với item hiện tại
       List<OrderCode> newList = [newItem];
       final newJsonString = jsonEncode(newList);
@@ -836,7 +835,7 @@ class ApiCommon {
       try {
         List<dynamic> decodedList = jsonDecode(jsonString);
         List<Map<String, dynamic>> updatedList = [];
-        
+
         for (var item in decodedList) {
           try {
             if (item is Map<String, dynamic> && item['orderCode'] != code) {
@@ -864,33 +863,36 @@ class ApiCommon {
     prefs.remove(_deliveryListCode);
   }
 
-  static Future<bool> existedItemOnDeliveryList(String key) async {
+  static Future<DeliveryItems?> existedItemOnDeliveryList(String key) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_deliveryListCode);
 
-    if (jsonString == null) return false;
+    if (jsonString == null) return null;
 
     try {
-      final List<dynamic> decodedList = jsonDecode(jsonString);
-      
+      final List<dynamic> decoded = jsonDecode(jsonString);
+      final List<DeliveryItems> decodedList = decoded.map((item) => DeliveryItems.fromJson(item as Map<String, dynamic>)).toList();
+      // final List<DeliveryItems> decodedList = jsonDecode(jsonString);
       for (var item in decodedList) {
-        try {
-          if (item is Map<String, dynamic> && item['orderCode'] == key) {
-            return true;
-          }
-        } catch (parseError) {
-          print('🔍 ERROR: Failed to parse item in existedItemOnDeliveryList: $parseError');
+        if (item.order.code == key) {
+          return item;
         }
       }
-
-      return false;
     } catch (e) {
       print('🔍 ERROR: Failed to check item existence: $e');
       print('🔍 ERROR: JSON string: $jsonString');
       // Nếu có lỗi, xóa cache và trả về false
       await prefs.remove(_deliveryListCode);
       print('🔍 DEBUG: Cleared corrupted cache data');
-      return false;
+      return null;
     }
+
+    // List<Map<String, dynamic>> updatedList = decodedList.map((e) => Map<String, dynamic>.from(e)).where((item) => item['orderCode'] == key).toList();
+
+    // if (updatedList.isNotEmpty && updatedList.length > 0) {
+    //   return true;
+    // }
+
+    return null;
   }
 }
