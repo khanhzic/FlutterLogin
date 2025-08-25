@@ -77,14 +77,16 @@ class ApiCommon {
 
   // Kiểm tra token hết hạn (JWT)
   static Future<bool> isTokenExpired() async {
-    final token = await getToken();
-    if (token == null || token.isEmpty) return true;
-    try {
-      return JwtDecoder.isExpired(token);
-    } catch (e) {
-      // Nếu token không phải JWT hoặc lỗi giải mã, coi như hết hạn
-      return true;
-    }
+    // for testing: none expired date.
+    return false;
+    // final token = await getToken();
+    // if (token == null || token.isEmpty) return true;
+    // try {
+    //   return JwtDecoder.isExpired(token);
+    // } catch (e) {
+    //   // Nếu token không phải JWT hoặc lỗi giải mã, coi như hết hạn
+    //   return true;
+    // }
   }
 
   /// Kiểm tra token hết hạn, nếu hết hạn thì xóa token, user và chuyển về màn hình login

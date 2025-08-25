@@ -662,13 +662,13 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
                     ),
                   ),
                   // Debug info
-                  if (deliveryItems.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Debug: ${deliveryItems.length} items in deliveryItems, ${_filteredItems.length} items in _filteredItems',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
+                  // if (deliveryItems.isNotEmpty) ...[
+                  //   const SizedBox(height: 8),
+                  //   Text(
+                  //     'Debug: ${deliveryItems.length} items in deliveryItems, ${_filteredItems.length} items in _filteredItems',
+                  //     style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  //   ),
+                  // ],
                   const SizedBox(height: 10),
                   Expanded(
                     child: Builder(
@@ -682,13 +682,15 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
                                   separatorBuilder: (_, __) => const Divider(),
                                   itemBuilder: (context, index) {
                                     final item = _filteredItems[index];
+                                    final numberPackage = item.quantity;
                                     final label = '${item.orderCode ?? ''}';
+                                    final textDetail = "Tổng số gói: " + numberPackage.toString() + " \n" + (item.qrData.isNotEmpty ? item.qrData : '');
 
                                     // Debug logging
-                                    print('🔍 DEBUG: Building ListTile for item $index:');
-                                    print('🔍 DEBUG: - orderCode: ${item.orderCode}');
-                                    print('🔍 DEBUG: - qrData: "${item.qrData}"');
-                                    print('🔍 DEBUG: - qrData.isEmpty: ${item.qrData.isEmpty}');
+                                    // print('🔍 DEBUG: Building ListTile for item $index:');
+                                    // print('🔍 DEBUG: - orderCode: ${item.orderCode}');
+                                    // print('🔍 DEBUG: - qrData: "${item.qrData}"');
+                                    // print('🔍 DEBUG: - qrData.isEmpty: ${item.qrData.isEmpty}');
 
                                     return ListTile(
                                       leading: const Icon(Icons.qr_code),
@@ -700,7 +702,7 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
                                           ? Padding(
                                               padding: const EdgeInsets.only(top: 8.0),
                                               child: Text(
-                                                item.qrData,
+                                                textDetail,
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey[600],
