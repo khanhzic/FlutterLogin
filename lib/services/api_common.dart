@@ -711,7 +711,7 @@ class ApiCommon {
       // Chỉ sử dụng notes từ server nếu không rỗng
       String qrData = item.order.notes.isNotEmpty ? item.order.notes : "";
 
-      OrderCode orderCode = new OrderCode(orderCode: item.order.code, quantity: item.order.totalQuantity, qrData: qrData);
+      OrderCode orderCode = new OrderCode(orderCode: item.order.code, quantity: item.quantity, qrData: qrData);
       data.add(orderCode); // Append to list
     }
 

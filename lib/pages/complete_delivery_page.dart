@@ -35,8 +35,8 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _fetchDeliveryItems();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   Future<void> _fetchDeliveryItems() async {
@@ -44,6 +44,8 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
       _loading = true;
     });
     try {
+      await ApiCommon.getListDeliveryItems(context);
+
       // Chỉ lấy data từ cache local, không gọi server
       final items = await ApiCommon.getDeliveryListFromCache();
       print('🔍 DEBUG: _fetchDeliveryItems - Retrieved ${items.length} items from cache');
