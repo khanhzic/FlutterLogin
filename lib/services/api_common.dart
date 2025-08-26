@@ -865,36 +865,16 @@ class ApiCommon {
     prefs.remove(_deliveryListCode);
   }
 
-  static Future<DeliveryItems?> existedItemOnDeliveryList(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_deliveryListCode);
+  static Future<int> existedItemOnDeliveryList(String key) async {
+    final List<OrderCode> cachedList = await getDeliveryListFromCache();
+    if (cachedList == null || cachedList.length == 0) return -1;
 
-    if (jsonString == null) return null;
-
-    try {
-      final List<dynamic> decoded = jsonDecode(jsonString);
-      final List<DeliveryItems> decodedList = decoded.map((item) => DeliveryItems.fromJson(item as Map<String, dynamic>)).toList();
-      // final List<DeliveryItems> decodedList = jsonDecode(jsonString);
-      for (var item in decodedList) {
-        if (item.order.code == key) {
-          return item;
-        }
+    for (var item in cachedList) {
+      if (item.orderCode == key) {
+        return item.quantity;
       }
-    } catch (e) {
-      print('🔍 ERROR: Failed to check item existence: $e');
-      print('🔍 ERROR: JSON string: $jsonString');
-      // Nếu có lỗi, xóa cache và trả về false
-      await prefs.remove(_deliveryListCode);
-      print('🔍 DEBUG: Cleared corrupted cache data');
-      return null;
     }
 
-    // List<Map<String, dynamic>> updatedList = decodedList.map((e) => Map<String, dynamic>.from(e)).where((item) => item['orderCode'] == key).toList();
-
-    // if (updatedList.isNotEmpty && updatedList.length > 0) {
-    //   return true;
-    // }
-
-    return null;
+    return -1;
   }
 }

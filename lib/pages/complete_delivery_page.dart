@@ -124,15 +124,15 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
           final parseData = ProductsService.parseQRCode(qrData);
           //int quantity = parseData["quantity"] ?? 0;
           // String orderCode = parseData["orderCode"];
-          final exists = ApiCommon.existedItemOnDeliveryList(parseData.orderCode);
+          int existsNum = await ApiCommon.existedItemOnDeliveryList(parseData.orderCode);
           // ignore: unnecessary_null_comparison
-          if (exists != null) {
+          if (existsNum > -1) {
             setState(() {
               _selectedCode = parseData.orderCode;
               _qrErrorMessage = null;
             });
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _showFinishTransportDialog(parseData.orderCode, exists as DeliveryItems);
+              _showFinishTransportDialog(parseData.orderCode, existsNum);
             });
           } else {
             setState(() {
@@ -153,7 +153,7 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
     });
   }
 
-  void _showFinishTransportDialog(String code, DeliveryItems item) {
+  void _showFinishTransportDialog(String code, int numberPackages) {
     // Xóa ảnh cũ khi mở dialog mới
     setState(() {
       _pickedImage = null;
@@ -184,7 +184,7 @@ class _CompleteDeliveryPageState extends State<CompleteDeliveryPage> with Widget
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Số lượng gói: ${item.number_packages}',
+                      'Số lượng gói: ' + numberPackages.toString(),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                     const SizedBox(height: 20),
