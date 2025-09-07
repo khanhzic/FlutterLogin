@@ -100,7 +100,43 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
     }
 
     status = await Permission.camera.request();
-    return status.isGranted;
+
+    if (status.isGranted) {
+      return true;
+    }
+
+    if (status.isPermanentlyDenied || status.isDenied || status.isRestricted) {
+      //final ImagePicker picker = ImagePicker();
+      //final XFile? image = await picker.pickImage(source: ImageSource.camera);
+      await _showOpenSettingsDialog(
+        title: 'Yêu cầu quyền Camera',
+        message: 'Ứng dụng cần quyền truy cập Camera để quét mã QR. Vui lòng bật quyền trong Cài đặt.',
+      );
+    }
+    return false;
+  }
+
+  Future<void> _showOpenSettingsDialog({required String title, required String message}) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await openAppSettings();
+            },
+            child: const Text('Mở Cài đặt'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onQRViewCreated(QRViewController controller) {
