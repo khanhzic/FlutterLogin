@@ -112,5 +112,6 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/images/logo.png"
+  remove_alpha_ios: true   # <--- important
   min_sdk_android: 21
   min_sdk_ios: 13
