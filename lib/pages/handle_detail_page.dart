@@ -24,7 +24,9 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
 
   // Hàm restart process
   Future<void> _restartProcess() async {
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
     try {
       final respData = await ApiCommon.processAction(
         context: context,
@@ -44,20 +46,23 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
     } catch (e) {
       _showErrorAlert({'message': 'Có lỗi xảy ra, hãy chụp lại màn hình và liên lạc với quản trị viên'});
     } finally {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   int get _quantity => int.tryParse(_quantityController.text) ?? 0;
   bool get _canComplete {
+    return true;
     // khong thuc hien require upload image nua cho cac cong doan "dong goi"
-    const needImageProcessIds = []; // [11, 12, 20, 21, 31, 32, 37, 38];
-    final requireImage = needImageProcessIds.contains(widget.processId);
-    if (requireImage) {
-      return _imageFile != null && _quantity > 0;
-    } else {
-      return _quantity > 0;
-    }
+    // const needImageProcessIds = []; // [11, 12, 20, 21, 31, 32, 37, 38];
+    // final requireImage = needImageProcessIds.contains(widget.processId);
+    // if (requireImage) {
+    //   return _imageFile != null && _quantity > 0;
+    // } else {
+    //   return _quantity > 0;
+    // }
   }
 
   Future<void> _pickImage() async {
@@ -80,16 +85,18 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
 
   Future<void> _onComplete() async {
     if (!_canComplete || widget.code == null || widget.processId == null) return;
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
     try {
       // Danh sách processId cần ảnh: bo qua validate cho phan "dong goi"
-      const needImageProcessIds =[]; // [11, 12, 20, 21, 31, 32, 37, 38];
-      final requireImage = needImageProcessIds.contains(widget.processId);
-      if (requireImage && _imageFile == null) {
-        _showErrorAlert({'message': 'Vui lòng chọn hoặc chụp ảnh trước khi hoàn thành.'});
-        setState(() { _isLoading = false; });
-        return;
-      }
+      // const needImageProcessIds =[]; // [11, 12, 20, 21, 31, 32, 37, 38];
+      // final requireImage = needImageProcessIds.contains(widget.processId);
+      // if (requireImage && _imageFile == null) {
+      //   _showErrorAlert({'message': 'Vui lòng chọn hoặc chụp ảnh trước khi hoàn thành.'});
+      //   setState(() { _isLoading = false; });
+      //   return;
+      // }
       final respData = await ApiCommon.processAction(
         context: context,
         endpoint: 'end-working',
@@ -120,13 +127,17 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
     } catch (e) {
       _showErrorAlert({'message': 'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin'});
     } finally {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   Future<void> _onPause() async {
     if (widget.code == null || widget.processId == null) return;
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
     try {
       final respData = await ApiCommon.processAction(
         context: context,
@@ -154,7 +165,9 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
     } catch (e) {
       _showErrorAlert({'message': 'Có lỗi không thể thực hiện. Hãy chụp màn hình và gửi cho admin'});
     } finally {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -254,8 +267,8 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
                   textStyle: const TextStyle(fontSize: 18),
                 ),
                 child: _isLoading
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Bắt đầu lại'),
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Bắt đầu lại'),
               ),
             ],
           ),
@@ -365,8 +378,8 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
                           ),
                         ),
                         child: _isLoading
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Hoàn thành'),
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Hoàn thành'),
                       ),
                     ),
                   ),
@@ -396,4 +409,4 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
       backgroundColor: const Color(0xFFF7F8FA),
     );
   }
-} 
+}
