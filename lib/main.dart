@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
         ),
         home: const SplashScreen(),
         navigatorObservers: [routeObserver], // Thêm dòng này
+        debugShowCheckedModeBanner: false,
       ),
     );
   }

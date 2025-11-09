@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Login App</string>
+	<string>Winsun</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -45,5 +45,18 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app requires microphone access for video recording.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập Camera để quét QR và chụp ảnh minh chứng.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập Thư viện ảnh để chọn ảnh minh chứng.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng cần quyền lưu ảnh vào Thư viện.</string>
 </dict>
 </plist>
