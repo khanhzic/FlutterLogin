@@ -45,18 +45,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- Internet (ATS). Allow non-HTTPS if needed; remove if only HTTPS is used. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	
-	<!-- Permission to use microphone (if recording video) -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app requires microphone access for video recording.</string>
-
-	<!-- Camera and Photos permissions -->
 	<key>NSCameraUsageDescription</key>
 	<string>Ứng dụng cần quyền truy cập Camera để quét QR và chụp ảnh minh chứng.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

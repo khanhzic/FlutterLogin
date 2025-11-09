@@ -50,7 +50,8 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
 
   int get _quantity => int.tryParse(_quantityController.text) ?? 0;
   bool get _canComplete {
-    const needImageProcessIds = [11, 12, 20, 21, 31, 32, 37, 38];
+    // khong thuc hien require upload image nua cho cac cong doan "dong goi"
+    const needImageProcessIds = []; // [11, 12, 20, 21, 31, 32, 37, 38];
     final requireImage = needImageProcessIds.contains(widget.processId);
     if (requireImage) {
       return _imageFile != null && _quantity > 0;
@@ -81,8 +82,8 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
     if (!_canComplete || widget.code == null || widget.processId == null) return;
     setState(() { _isLoading = true; });
     try {
-      // Danh sách processId cần ảnh
-      const needImageProcessIds = [11, 12, 20, 21, 31, 32, 37, 38];
+      // Danh sách processId cần ảnh: bo qua validate cho phan "dong goi"
+      const needImageProcessIds =[]; // [11, 12, 20, 21, 31, 32, 37, 38];
       final requireImage = needImageProcessIds.contains(widget.processId);
       if (requireImage && _imageFile == null) {
         _showErrorAlert({'message': 'Vui lòng chọn hoặc chụp ảnh trước khi hoàn thành.'});

@@ -20,7 +20,7 @@
             "name": "FlutterLogin (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "debug"
         }
     ]
 }

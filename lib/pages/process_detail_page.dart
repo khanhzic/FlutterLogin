@@ -467,7 +467,8 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
 
   Future<void> _stopProcess() async {
     final result = await _showNoteAndImageDialog('Nhập chú thích và chọn ảnh cho trạng thái báo lỗi');
-    if (result != null && result['note'] != null && result['image'] != null) {
+    //if (result != null && result['note'] != null && result['image'] != null) {
+    if (result != null && result['note'] != null) {
       await _callApi(
           'work/stop',
           {
@@ -475,7 +476,7 @@ class _ProcessDetailPageState extends State<ProcessDetailPage> {
             'process_id': widget.processId,
             'note': result['note'],
           },
-          image: result['image']);
+          image: result['image'] ?? null);
       if (mounted) Navigator.of(context).pop();
     }
   }

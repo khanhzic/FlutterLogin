@@ -1,16 +1,124 @@
-# login_app
+Dưới đây là các command cơ bản để tạo, build và chạy một project Flutter mẫu ✅
 
-A new Flutter project.
+⸻
 
-## Getting Started
+🔹 1. Kiểm tra môi trường
 
-This project is a starting point for a Flutter application.
+flutter doctor
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+⸻
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+🔹 2. Tạo project Flutter mới
+
+flutter create my_app
+
+Vào project:
+
+cd my_app
+
+
+⸻
+
+🔹 3. Chạy project ở chế độ debug
+
+(trên thiết bị đã kết nối hoặc emulator đang mở)
+
+flutter run
+
+
+⸻
+
+🔹 4. Chạy với platform chỉ định
+
+Android:
+
+flutter run -d android
+
+iOS (macOS only):
+
+flutter run -d ios
+
+Web:
+
+flutter run -d chrome
+
+
+⸻
+
+🔹 5. Build app
+
+✅ Android APK
+
+flutter build apk
+
+APK sau khi build:
+
+build/app/outputs/flutter-apk/app-release.apk
+
+✅ Android App Bundle (Google Play)
+
+flutter build appbundle
+
+File output:
+
+build/app/outputs/bundle/release/app-release.aab
+
+✅ iOS (macOS required)
+
+flutter build ios
+
+✅ Web
+
+flutter build web
+
+
+⸻
+
+🔹 6. Clean project (khi lỗi build)
+
+flutter clean
+flutter pub get
+
+
+⸻
+
+🔹 7. Update dependencies
+
+flutter pub get
+
+Hoặc nâng cấp deps:
+
+flutter pub upgrade
+
+
+⸻
+
+🔹 8. Kiểm tra thiết bị đang kết nối
+
+flutter devices
+
+
+⸻
+
+✅ Tóm tắt nhanh
+
+Công việc	Command
+Tạo project	flutter create my_app
+Chạy app	flutter run
+Build APK	flutter build apk
+Build AAB	flutter build appbundle
+Clean	flutter clean
+Cài dependencies	flutter pub get
+Kiểm tra thiết bị	flutter devices
+
+
+⸻
+
+Nếu bạn muốn mình có thể tạo giúp bạn sẵn:
+✅ UI mẫu (login, home, list, dashboard…)
+✅ Cấu trúc thư mục chuẩn
+✅ State management
+✅ API connect mẫu
+
+Bạn muốn mình gen template nào không? 😎
