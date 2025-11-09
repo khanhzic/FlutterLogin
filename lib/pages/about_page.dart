@@ -40,6 +40,17 @@ class AboutPage extends StatelessWidget {
                 'Với sự kết hợp giữa chất lượng vượt trội, thiết kế sáng tạo và dịch vụ chuyên nghiệp, Winsun Việt Nam cam kết mang đến giải pháp hoàn hảo cho không gian sống và làm việc của bạn.',
                 style: TextStyle(fontSize: 15),
               ),
+              SizedBox(height: 40),
+              Center(
+                child: Text(
+                  'Phiên bản 1.0.1+4',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
