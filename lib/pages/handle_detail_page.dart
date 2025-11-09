@@ -90,8 +90,8 @@ class _HandleDetailPageState extends State<HandleDetailPage> {
     });
     try {
       // Danh sách processId cần ảnh: bo qua validate cho phan "dong goi"
-      // const needImageProcessIds =[]; // [11, 12, 20, 21, 31, 32, 37, 38];
-      // final requireImage = needImageProcessIds.contains(widget.processId);
+      //const needImageProcessIds = []; // [11, 12, 20, 21, 31, 32, 37, 38];
+      final requireImage = true; //needImageProcessIds.contains(widget.processId);
       // if (requireImage && _imageFile == null) {
       //   _showErrorAlert({'message': 'Vui lòng chọn hoặc chụp ảnh trước khi hoàn thành.'});
       //   setState(() { _isLoading = false; });
